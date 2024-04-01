@@ -441,7 +441,8 @@ public:
     void setHotSpot(int x, int y) { setHotSpot(QPoint(x, y)); }
     QPoint hotSpot() { return mHotSpot; }
 
-    QPoint dropPosition();
+    QPoint positionInMap() const;
+    QPoint dropPosition() const;
 
     MapInfo *mapInfo();
 

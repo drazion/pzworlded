@@ -4329,7 +4329,12 @@ void DnDItem::setHotSpot(const QPoint &pos)
     mBoundingRect = QRectF(-mMapImage->tileToImageCoords(mHotSpot) / mMapImage->scale() * tileScale, scaledImageSize);
 }
 
-QPoint DnDItem::dropPosition()
+QPoint DnDItem::positionInMap() const
+{
+    return mPositionInMap;
+}
+
+QPoint DnDItem::dropPosition() const
 {
     return mPositionInMap - mHotSpot;
 }
@@ -6020,7 +6025,7 @@ void CellScene::dropEvent(QGraphicsSceneDragDropEvent *event)
                 if (object->isBasement() == false) {
                     continue;
                 }
-                if (object->bounds().contains(dropPos) == false) {
+                if (object->bounds().contains(mDnDItem->positionInMap()) == false) {
                     continue;
                 }
                 basementObject = object;
