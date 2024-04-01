@@ -35,6 +35,7 @@
 #include "imagelayer.h"
 #include "objectgroup.h"
 #include "map.h"
+#include "maplevel.h"
 #include "mapobject.h"
 #include "tile.h"
 #include "tilelayer.h"
@@ -451,27 +452,6 @@ static void readLayerAttributes(Layer *layer,
     const int visible = visibleRef.toString().toInt(&ok);
     if (ok)
         layer->setVisible(visible);
-}
-
-QString layerNameWithoutPrefix(const QString &name)
-{
-    int pos = name.indexOf(QLatin1Char('_')) + 1; // Could be "-1 + 1 == 0"
-    return name.mid(pos);
-}
-
-bool levelForLayer(const QString &layerName, int *levelPtr)
-{
-    if (levelPtr) (*levelPtr) = 0;
-
-    // See if the layer name matches "0_foo" or "1_bar" etc.
-    QStringList sl = layerName.trimmed().split(QLatin1Char('_'));
-    if (sl.count() > 1 && !sl[1].isEmpty()) {
-        bool conversionOK;
-        uint level = sl[0].toUInt(&conversionOK);
-        if (levelPtr) (*levelPtr) = level;
-        return conversionOK;
-    }
-    return false;
 }
 
 TileLayer *MapReaderPrivate::readLayer()
@@ -1015,8 +995,8 @@ bool MapReaderPrivate::readLayerLevel(QString &name, int &level)
             return false;
         }
     } else {
-        if (levelForLayer(name, &level)) {
-            name = layerNameWithoutPrefix(name);
+        if (MapLevel::levelForLayer(name, &level)) {
+            name = MapLevel::layerNameWithoutPrefix(name);
         }
     }
     return true;
