@@ -1548,7 +1548,9 @@ bool LotFilesWorker256::processObjectGroup(CombinedCellMaps &combinedMaps, World
         QString name = mapObject->name();
         if (name.isEmpty())
             name = QLatin1String("unnamed");
-
+        if (level <= 0 && name.startsWith(QStringLiteral("emptyoutside"))) {
+            continue;
+        }
         if (objectGroup->map()->orientation() == Map::Isometric) {
             x += 3 * level;
             y += 3 * level;
