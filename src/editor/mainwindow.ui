@@ -369,6 +369,7 @@
     <addaction name="menuAlias_Fixup"/>
     <addaction name="actionBuildingsToPNG"/>
     <addaction name="actionLootInspector"/>
+    <addaction name="actionZonesToPNG"/>
    </widget>
    <widget class="QMenu" name="menuInGameMap">
     <property name="title">
@@ -1014,6 +1015,11 @@
    </property>
    <property name="toolTip">
     <string>Overwrite 256</string>
+   </property>
+  </action>
+  <action name="actionZonesToPNG">
+   <property name="text">
+    <string>Zones To PNG...</string>
    </property>
   </action>
  </widget>

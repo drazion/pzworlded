@@ -4,8 +4,8 @@ include(../zlib/zlib.pri)
 
 TEMPLATE = lib
 TARGET = tiled
-target.path = $${LIBDIR}
-INSTALLS += target
+#target.path = $${LIBDIR}
+#INSTALLS += target
 macx {
     DESTDIR = ../../bin/PZWorldEd.app/Contents/Frameworks
     QMAKE_LFLAGS_SONAME = -Wl,-install_name,@executable_path/../Frameworks/

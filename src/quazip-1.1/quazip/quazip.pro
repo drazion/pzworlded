@@ -14,8 +14,8 @@ greaterThan(QT_MAJOR_VERSION, 5) {
 DEFINES += QUAZIP_BUILD QUAZIP_STATIC
 #win32:DEFINES += ZLIB_DLL
 
-target.path = $${LIBDIR}
-INSTALLS += target
+#target.path = $${LIBDIR}
+#INSTALLS += target
 
 macx {
     DESTDIR = ../../bin/TileZed.app/Contents/Frameworks

@@ -45,6 +45,7 @@
 #include "objectgroupsdialog.h"
 #include "objecttypesdialog.h"
 #include "pngbuildingdialog.h"
+#include "pngzonesdialog.h"
 #include "preferences.h"
 #include "preferencesdialog.h"
 #include "progress.h"
@@ -273,6 +274,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->actionFromToSelected, &QAction::triggered,
             this, &MainWindow::FromToSelected);
     connect(ui->actionBuildingsToPNG, &QAction::triggered, this, &MainWindow::BuildingsToPNG);
+    connect(ui->actionZonesToPNG, &QAction::triggered, this, &MainWindow::ZonesToPNG);
     connect(ui->actionQuit, &QAction::triggered, this, &QWidget::close);
 
     connect(ui->actionCopy, &QAction::triggered, this, &MainWindow::copy);
@@ -1113,6 +1115,15 @@ void MainWindow::BuildingsToPNG()
     if (!worldDoc)
         worldDoc = mCurrentDocument->asCellDocument()->worldDocument();
     PNGBuildingDialog d(worldDoc->world(), this);
+    d.exec();
+}
+
+void MainWindow::ZonesToPNG()
+{
+    WorldDocument *worldDoc = mCurrentDocument->asWorldDocument();
+    if (!worldDoc)
+        worldDoc = mCurrentDocument->asCellDocument()->worldDocument();
+    PNGZonesDialog d(worldDoc->world(), this);
     d.exec();
 }
 

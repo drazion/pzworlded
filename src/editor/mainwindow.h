@@ -169,6 +169,7 @@ public slots:
     void FromToSelected();
 
     void BuildingsToPNG();
+    void ZonesToPNG();
 
     void lootInspector();
 

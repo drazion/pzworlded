@@ -21,8 +21,8 @@ win32 {
 
 TARGET = PZWorldEd
 TEMPLATE = app
-target.path = $${PREFIX}/bin
-INSTALLS += target
+#target.path = $${PREFIX}/bin
+#INSTALLS += target
 win32 {
     DESTDIR = ../..
 } else {
@@ -81,6 +81,7 @@ SOURCES += main.cpp\
     navigation/chunkdatafile256.cpp \
     navigation/isochunk256.cpp \
     navigation/isogridsquare256.cpp \
+    pngzonesdialog.cpp \
     tilesetstxtfile.cpp \
     worldview.cpp \
     worldscene.cpp \
@@ -195,6 +196,7 @@ HEADERS  += mainwindow.h \
     navigation/chunkdatafile256.h \
     navigation/isochunk256.h \
     navigation/isogridsquare256.h \
+    pngzonesdialog.h \
     tilesetstxtfile.h \
     worldconstants.h \
     worldview.h \
@@ -296,6 +298,7 @@ FORMS    += mainwindow.ui \
     InGameMap/ingamemappropertiesform.ui \
     InGameMap/ingamemappropertydialog.ui \
     loadthumbnailsdialog.ui \
+    pngzonesdialog.ui \
     propertiesview.ui \
     propertiesdialog.ui \
     templatesdialog.ui \
