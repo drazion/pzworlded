@@ -120,7 +120,11 @@ void InGameMapImageDialog::createImage()
     metaGrid.Create(inputPath);
     QSize worldSize(metaGrid.maxx - metaGrid.minx + 1, metaGrid.maxy - metaGrid.miny + 1);
 
-    QImage image(worldSize * 300, QImage::Format_RGBA8888);
+    int CHUNKS_PER_CELL = b256 ? 32 : 30;
+    int SQUARES_PER_CHUNK = b256 ? 8 : 10;
+    int SQUARES_PER_CELL = CHUNKS_PER_CELL * SQUARES_PER_CHUNK;
+
+    QImage image(worldSize * SQUARES_PER_CELL, QImage::Format_RGBA8888);
     image.fill(Qt::gray);
 
     for (int cy = metaGrid.miny; cy <= metaGrid.maxy; cy++) {
