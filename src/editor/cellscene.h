@@ -719,6 +719,8 @@ public:
     void paint(QPainter *painter, Tiled::MapRenderer *renderer, const QRectF& exposedRect);
     void paint2(QPainter *painter, Tiled::MapRenderer *renderer, const QRectF& exposedRect);
     void gatherTiles(Tiled::MapRenderer *renderer, const QRectF& exposedRect, QList<VBOTiles *> &exposedTiles);
+    int tryAddExtraJumbo_Trunk(const Tiled::Tile *tile, const QPointF &screenPos, int tileWidth, QList<VBOTile> &tiles);
+    int tryAddExtraJumbo_Leaves(const Tiled::Tile *tile, const QPointF &screenPos, int tileWidth, QList<VBOTile> &tiles);
     VBOTiles *getTilesFor(const QPoint& square, bool bCreate);
     void getSquaresInRect(Tiled::MapRenderer *renderer, const QRectF &exposedRect, QList<QPoint>& out);
     bool isEmpty() const;

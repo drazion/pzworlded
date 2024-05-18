@@ -1080,16 +1080,21 @@ void LayerGroupVBO::gatherTiles(Tiled::MapRenderer *renderer, const QRectF& expo
                     if (cell.mTile == nullptr)
                         continue;
                     const Tile *tile = cell.mTile;
-                    VBOTile vboTile;
                     Tileset *tileset = tile->tileset();
+                    bool bJUMBO = tileset->name().contains(QStringLiteral("JUMBO_"));
+                    VBOTile vboTile;
                     vboTile.mSubMap = cell.mSubMap;
                     vboTile.mHideIfVisible = cell.mHideIfVisible;
                     vboTile.mLayerIndex = mMapCompositeVBO->mLayerNameToIndex.value(cell.mLayerName, -1);
-                    vboTile.mRect = QRect(screenPos.x() + tile->offset().x(), screenPos.y() + tile->offset().y() - tile->height(), tile->atlasSize().width(), tile->atlasSize().height());
+                    vboTile.mRect = QRect(screenPos.x() + tileset->tileOffset().x() + tile->offset().x(),
+                                          screenPos.y() + tileset->tileOffset().y() + tile->offset().y() - tile->height(),
+                                          tile->atlasSize().width(), tile->atlasSize().height());
                     vboTile.mTilesetName = tileset->name();
                     vboTile.mAtlasUVST = tile->atlasUVST();
 
-                    if (tileWidth == tile->width() * 2) {
+                    if (bJUMBO) {
+                        vboTile.mRect.translate(-tileWidth / 2, 0); // FIXME: Shouldn't Tiled::setZomboidTileOffset() take care of this? Possibly a TileScale=2 issue.
+                    } else if (tileWidth == tile->width() * 2) {
                         vboTile.mRect.translate(tile->offset().x(), tile->offset().y() - tile->height());
                         vboTile.mRect.setWidth(tile->atlasSize().width() * 2);
                         vboTile.mRect.setHeight(tile->atlasSize().height() * 2);
@@ -1100,10 +1105,96 @@ void LayerGroupVBO::gatherTiles(Tiled::MapRenderer *renderer, const QRectF& expo
                     }
                     tileCount[vx + vy * VBO_SQUARES]++;
                     tiles += vboTile;
+
+                    if (bJUMBO) {
+                        tileCount[vx + vy * VBO_SQUARES] += tryAddExtraJumbo_Trunk(tile, screenPos, tileWidth, tiles);
+                        tileCount[vx + vy * VBO_SQUARES] += tryAddExtraJumbo_Leaves(tile, screenPos, tileWidth, tiles);
+                    }
                 }
             }
         }
     }
+}
+
+// FIXME: Copied from ZLevelRenderer.cpp
+namespace {
+struct JUMBO
+{
+    QString tilesetName;
+    bool bHasLeaves;
+};
+
+static JUMBO s_jumbo[] = {
+    { QStringLiteral("e_americalholly"), false },
+    { QStringLiteral("e_americanlinden"), true },
+    { QStringLiteral("e_canadianhemlock"), false },
+    { QStringLiteral("e_carolinasilverbell"), true },
+    { QStringLiteral("e_cockspurhawthorn"), true },
+    { QStringLiteral("e_dogwood"), true },
+    { QStringLiteral("e_easternredbud"), false },
+    { QStringLiteral("e_redmaple"), true },
+    { QStringLiteral("e_riverbirch"), true },
+    { QStringLiteral("e_virginiapine"), false },
+    { QStringLiteral("e_yellowwood"), true },
+};
+} // namespace anonymous
+
+int LayerGroupVBO::tryAddExtraJumbo_Trunk(const Tiled::Tile *tile, const QPointF &screenPos, int tileWidth, QList<VBOTile> &tiles)
+{
+    VBOTile &vboTile0 = tiles.last();
+    // Leaves overlay
+    int columns = tile->tileset()->columnCount();
+    int row_trunk = 0;
+    int row = tile->id() / columns;
+    if (row < 2) {
+        return 0;
+    }
+    Tileset *tileset = tile->tileset();
+    QString tilesetName = tileset->name();
+    for (int i = 0; i < sizeof(s_jumbo) / sizeof(JUMBO); i++) {
+        if (s_jumbo[i].bHasLeaves && tilesetName.startsWith(s_jumbo[i].tilesetName)) {
+            Tile *tile2 = tileset->tileAt(columns * row_trunk + tile->id() % columns);
+
+            VBOTile vboTile = vboTile0;
+            vboTile.mRect = QRect(screenPos.x() + tileset->tileOffset().x() + tile2->offset().x(),
+                                  screenPos.y() + tileset->tileOffset().y() + tile2->offset().y() - tile2->height(),
+                                  tile2->atlasSize().width(), tile2->atlasSize().height());
+            vboTile.mAtlasUVST = tile2->atlasUVST();
+            vboTile.mRect.translate(-tileWidth / 2, 0); // FIXME: Shouldn't Tiled::setZomboidTileOffset() take care of this? Possibly a TileScale=2 issue.
+            tiles.insert(tiles.size() - 1, vboTile);
+            return 1;
+        }
+    }
+    return 0;
+}
+
+int LayerGroupVBO::tryAddExtraJumbo_Leaves(const Tiled::Tile *tile, const QPointF &screenPos, int tileWidth, QList<VBOTile> &tiles)
+{
+    VBOTile &vboTile0 = tiles.last();
+    // Leaves overlay
+    int columns = tile->tileset()->columnCount();
+    int row_summer = 3;
+    int row = tile->id() / columns;
+    if (row >= 2) {
+        return 0;
+    }
+    Tileset *tileset = tile->tileset();
+    QString tilesetName = tileset->name();
+    for (int i = 0; i < sizeof(s_jumbo) / sizeof(JUMBO); i++) {
+        if (s_jumbo[i].bHasLeaves && tilesetName.startsWith(s_jumbo[i].tilesetName)) {
+            Tile *tile2 = tileset->tileAt(columns * row_summer + tile->id() % columns);
+
+            VBOTile vboTile = vboTile0;
+            vboTile.mRect = QRect(screenPos.x() + tileset->tileOffset().x() + tile2->offset().x(),
+                                  screenPos.y() + tileset->tileOffset().y() + tile2->offset().y() - tile2->height(),
+                                  tile2->atlasSize().width(), tile2->atlasSize().height());
+            vboTile.mAtlasUVST = tile2->atlasUVST();
+            vboTile.mRect.translate(-tileWidth / 2, 0); // FIXME: Shouldn't Tiled::setZomboidTileOffset() take care of this? Possibly a TileScale=2 issue.
+            tiles += vboTile;
+            return 1;
+        }
+    }
+    return 0;
 }
 
 VBOTiles *LayerGroupVBO::getTilesFor(const QPoint &square, bool bCreate)

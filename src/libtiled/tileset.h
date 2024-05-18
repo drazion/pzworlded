@@ -308,6 +308,13 @@ private:
 #endif
 };
 
+#ifdef ZOMBOID
+extern TILEDSHARED_EXPORT QSize getZomboidTilesetSize1x(const QString &tilesetName);
+extern TILEDSHARED_EXPORT QPoint getZomboidTileOffset(const QString &tilesetName);
+extern TILEDSHARED_EXPORT void setZomboidTileOffset(Tileset *tileset);
+extern TILEDSHARED_EXPORT void setZomboidTileOffset(Tileset *tileset, const QString &tilesetName);
+#endif
+
 } // namespace Tiled
 
 #endif // TILESET_H
