@@ -2617,16 +2617,19 @@ void MainWindow::updateActions()
     CellDocument *cellDoc = hasDoc ? doc->asCellDocument() : 0;
     WorldDocument *worldDoc = hasDoc ? doc->asWorldDocument() : 0;
     World *world = worldDoc ? worldDoc->world() : (cellDoc ? cellDoc->world() : nullptr);
+    bool bEnable10x10 = false;
 
     ui->actionSave->setEnabled(hasDoc);
     ui->actionSaveAs->setEnabled(hasDoc);
     ui->actionClose->setEnabled(hasDoc);
     ui->actionCloseAll->setEnabled(hasDoc);
 
-    ui->menuGenerate_Lots->setEnabled(worldDoc != 0);
+    ui->menuGenerate_Lots->setEnabled(worldDoc != 0 && bEnable10x10);
     ui->actionGenerateLotsAll->setEnabled(worldDoc != 0);
     ui->actionGenerateLotsSelected->setEnabled(worldDoc &&
                                                worldDoc->selectedCellCount());
+
+    ui->menuGenerate_Lots_8x8->setEnabled(worldDoc != 0);
     ui->actionGenerateLotsAll8x8->setEnabled(worldDoc != 0);
     ui->actionGenerateLotsSelected8x8->setEnabled(worldDoc && worldDoc->selectedCellCount());
 
@@ -2688,7 +2691,8 @@ void MainWindow::updateActions()
     ui->actionRemoveInGameMapHole->setEnabled(canRemoveInGameMapHole());
     ui->actionConvertToPolygon->setEnabled(canConvertToInGameMapPolygon());
     ui->actionReadInGameMapFeaturesXML->setEnabled(hasDoc);
-    ui->actionWriteInGameMapFeaturesXML->setEnabled(hasDoc);
+    ui->actionWriteInGameMapFeaturesXML->setEnabled(hasDoc && bEnable10x10);
+    ui->actionWriteInGameMapFeaturesXML_256->setEnabled(hasDoc);
     QString featuresXML = Preferences::instance()->worldMapXMLFile();
     bool hasReadFeaturesXML = false;
     if (hasDoc && !featuresXML.isEmpty()) {
@@ -2700,8 +2704,8 @@ void MainWindow::updateActions()
             }
         }
     }
-    ui->actionOverwriteInGameMapFeaturesXML->setText(tr("Overwrite %1").arg(featuresXML.isEmpty() ? tr("features.xml") : QFileInfo(featuresXML).fileName()));
-    ui->actionOverwriteInGameMapFeaturesXML->setEnabled(hasDoc && hasReadFeaturesXML);
+    ui->actionOverwriteInGameMapFeaturesXML->setText(tr("Overwrite %1 10x10").arg(featuresXML.isEmpty() ? tr("features.xml") : QFileInfo(featuresXML).fileName()));
+    ui->actionOverwriteInGameMapFeaturesXML->setEnabled(hasDoc && hasReadFeaturesXML && bEnable10x10);
     ui->actionOverwriteInGameMapFeaturesXML_256->setText(tr("Overwrite %1 8x8").arg(featuresXML.isEmpty() ? tr("features.xml") : QFileInfo(featuresXML).fileName()));
     ui->actionOverwriteInGameMapFeaturesXML_256->setEnabled(hasDoc && hasReadFeaturesXML);
     ui->actionCreateWorldImage->setEnabled(hasDoc);

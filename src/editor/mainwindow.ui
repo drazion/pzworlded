@@ -239,7 +239,7 @@
     </property>
     <widget class="QMenu" name="menuGenerate_Lots">
      <property name="title">
-      <string>Generate Lots</string>
+      <string>Generate Lots 10x10</string>
      </property>
      <addaction name="actionGenerateLotsAll"/>
      <addaction name="actionGenerateLotsSelected"/>
@@ -877,7 +877,7 @@
      <normaloff>:/images/16x16/document-save-as.png</normaloff>:/images/16x16/document-save-as.png</iconset>
    </property>
    <property name="text">
-    <string>Write Features XML...</string>
+    <string>Write Features XML 10x10...</string>
    </property>
    <property name="toolTip">
     <string>Don't forget to do this!</string>
