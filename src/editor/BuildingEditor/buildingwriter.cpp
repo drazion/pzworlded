@@ -36,7 +36,8 @@ using namespace BuildingEditor;
 #define VERSION1 1
 #define VERSION2 2
 #define VERSION3 3
-#define VERSION_LATEST VERSION3
+#define VERSION4 4
+#define VERSION_LATEST VERSION4
 
 #if defined(Q_OS_WIN) && (_MSC_VER >= 1600)
 // Hmmmm.  libtiled.dll defines the Properties class as so:
@@ -567,6 +568,7 @@ bool BuildingWriter::write(Building *building, const QString &filePath)
         // If anything above failed, the temp file should auto-remove, but not after
         // a successful save.
         tempFile.setAutoRemove(false);
+    // QTemporaryFile::rename() doesn't work across filesystems.  Should use QSaveFile instead.
     } else if (!tempFile.copy(filePath)) {
         d->mError = QString(QLatin1String("Error copying file!\nFrom: %1\nTo: %2\n\n%3"))
                 .arg(tempFile.fileName())
