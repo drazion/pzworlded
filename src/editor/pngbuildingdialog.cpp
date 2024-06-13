@@ -31,6 +31,8 @@
 #include "tile.h"
 #include "tileset.h"
 
+#include "InGameMap/clipper.hpp"
+
 #include <qmath.h>
 #include <QFileDialog>
 #include <QMessageBox>
@@ -102,7 +104,8 @@ bool PNGBuildingDialog::generateWorld(World *world)
     QPainter p(&mImage);
     mPainter = &p;
 
-    if (ui->onlyTreesCheckBox->isChecked() == false) {
+    bool bMapImages = ui->bmpImagesCheckBox->isChecked();
+    if (bMapImages && (ui->onlyTreesCheckBox->isChecked() == false)) {
         for (WorldBMP *bmp : world->bmps()) {
             BMPToTMXImages *images = BMPToTMX::instance()->getImages(bmp->filePath(),
                                                                      bmp->pos(),
@@ -114,6 +117,10 @@ bool PNGBuildingDialog::generateWorld(World *world)
             p.drawImage(images->mBounds.topLeft() * 300, images->mBmp);
             delete images;
         }
+    }
+
+    if (ui->zonesCheckBox->isChecked()) {
+        paintZones(world);
     }
 
     for (int y = 0; y < world->height(); y++) {
@@ -184,6 +191,48 @@ bool PNGBuildingDialog::generateCell(WorldCell *cell)
     if (ui->buildingsCheckBox->isChecked() && (ui->onlyTreesCheckBox->isChecked() == false)) {
         processObjectGroups(cell, mapComposite);
     }
+
+    bool bWater = ui->waterCheckBox->isChecked();
+    if (bWater) {
+        // TODO: Perhaps use TileDefFile to get properties.
+        QSet<Tiled::Tile*> waterTiles;
+        for (Tileset *ts : mapInfo->map()->tilesets()) {
+            if (ts->name() == QLatin1String("blends_natural_02")) {
+                waterTiles += ts->tileAt(0);
+                waterTiles += ts->tileAt(5);
+                waterTiles += ts->tileAt(6);
+                waterTiles += ts->tileAt(7);
+
+                waterTiles += ts->tileAt(16 + 0);
+                waterTiles += ts->tileAt(16 + 5);
+                waterTiles += ts->tileAt(16 + 6);
+                waterTiles += ts->tileAt(16 + 7);
+            }
+        }
+        CompositeLayerGroup *layerGroup = mapComposite->layerGroupForLevel(0);
+        if (layerGroup && !waterTiles.isEmpty()) {
+            QVector<const Cell*> cells(40);
+            layerGroup->prepareDrawing2();
+            QRgb waterColor = qRgb(0, 0, 255);
+            for (int y = 0; y < mapInfo->map()->height(); y++) {
+                for (int x = 0; x < mapInfo->map()->width(); x++) {
+                    cells.resize(0);
+                    if (layerGroup->orderedCellsAt2(QPoint(x, y), cells)) {
+                        for (const Cell *tileCell : cells) {
+                            if (waterTiles.contains(tileCell->tile)) {
+                                mImage.setPixel(cell->x() * 300 + x, cell->y() * 300 + y, waterColor);
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    bool bTrees = ui->treesCheckBox->isChecked();
+    if (bTrees == false)
+        return true;
 
     CompositeLayerGroup *layerGroup = mapComposite->layerGroupForLevel(0);
     QList<Tileset*> tilesets;
@@ -278,4 +327,71 @@ bool PNGBuildingDialog::processObjectGroup(WorldCell *cell, ObjectGroup *objectG
         }
     }
     return true;
+}
+
+static QPolygonF createPolylineOutline(WorldCellObject *object)
+{
+    ClipperLib::ClipperOffset offset;
+    ClipperLib::Path path;
+    int SCALE = 100;
+    for (int i = 0; i < object->points().size(); i++) {
+        WorldCellObjectPoint p1 = object->points()[i];
+        path << ClipperLib::IntPoint(p1.x * SCALE, p1.y * SCALE);
+        if ((object->polylineWidth() % 2) != 0) {
+            ClipperLib::IntPoint cp = path[path.size()-1];
+            path[path.size()-1] = ClipperLib::IntPoint(cp.X + SCALE / 2, cp.Y + SCALE / 2);
+        }
+    }
+    offset.AddPath(path, ClipperLib::JoinType::jtMiter, ClipperLib::EndType::etOpenButt);
+    ClipperLib::Paths paths;
+    offset.Execute(paths, object->polylineWidth() * SCALE / 2.0);
+    QPolygonF result;
+    if (paths.empty()) {
+        return result;
+    }
+    int cellX = object->cell()->x();
+    int cellY = object->cell()->y();
+    ClipperLib::Path cPath = paths.at(0);
+    for (const auto &cPoint : cPath) {
+        result << QPointF(cellX * 300 + cPoint.X / (qreal) SCALE, cellY * 300.0 + cPoint.Y / (qreal) SCALE);
+    }
+    return result;
+}
+
+void PNGBuildingDialog::paintZones(World *world)
+{
+    QPainter *painter = mPainter;
+    QStringList validZones;
+    validZones << QLatin1String("Nav");
+    for (int y = 0; y < world->height(); y++) {
+        for (int x = 0; x < world->width(); x++) {
+            WorldCell *cell = world->cellAt(x, y);
+            for (WorldCellObject *object : cell->objects()) {
+                if (object->group() == nullptr) {
+                    continue;
+                }
+                if (validZones.contains(object->group()->name()) == false)
+                    continue;
+                QColor color = object->group()->color();
+        //        color.setAlpha(50);
+                painter->setBrush(QBrush(color));
+                painter->setPen(Qt::NoPen);
+                if (object->isRectangle()) {
+                    QPointF p1(cell->x() * 300.0 + object->x(), cell->y() * 300.0 + object->y());
+                    QPointF p2(cell->x() * 300.0 + (object->x() + object->width()), cell->y() * 300.0 + (object->y() + object->height()));
+                    painter->drawRect(QRectF(p1, p2));
+                }
+                if (object->isPolyline()) {
+                    painter->drawPolygon(createPolylineOutline(object));
+                }
+                if (object->isPolygon()) {
+                    QPolygonF poly;
+                    for (WorldCellObjectPoint pt : object->points()) {
+                        poly << QPointF(cell->x() * 300.0 + pt.x, cell->y() * 300.0 + pt.y);
+                    }
+                    painter->drawPolygon(poly);
+                }
+            }
+        }
+    }
 }

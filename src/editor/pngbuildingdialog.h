@@ -49,6 +49,8 @@ public:
     bool processObjectGroup(WorldCell *cell, Tiled::ObjectGroup *objectGroup,
                             int levelOffset, const QPoint &offset);
 
+    void paintZones(World *world);
+
 private slots:
     void accept();
     void browse();

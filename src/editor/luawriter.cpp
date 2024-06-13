@@ -17,7 +17,12 @@
 
 #include "luawriter.h"
 
+#include "lotfilesmanager.h"
 #include "luatablewriter.h"
+#include "map.h"
+#include "maplevel.h"
+#include "mapmanager.h"
+#include "objectgroup.h"
 #include "world.h"
 #include "worldcell.h"
 
@@ -436,6 +441,96 @@ public:
         w.writeEndDocument();
     }
 
+    void writeRoomTones(World *world, QIODevice *device)
+    {
+        mWorld = world;
+
+        LuaTableWriter w(device);
+        this->w = &w;
+
+        w.writeStartDocument();
+        w.writeStartTable("objects");
+
+        QPoint origin = mWorld->getGenerateLotsSettings().worldOrigin;
+
+        for (int y = 0; y < mWorld->height(); y++) {
+            for (int x = 0; x < mWorld->width(); x++) {
+                WorldCell *cell = mWorld->cellAt(x, y);
+#if 1
+                DelayedMapLoader mapLoader;
+                WorldCellLotList lots;
+                for (WorldCellLot *lot : cell->lots()) {
+                    MapInfo *info0 = MapManager::instance()->mapInfo(lot->mapName());
+                    if ((info0 == nullptr) || info0->properties().value(QLatin1String("RoomTone")).isEmpty())
+                        continue;
+                    if (MapInfo *info = MapManager::instance()->loadMap(lot->mapName(), QString(), true, MapManager::PriorityMedium)) {
+                        mapLoader.addMap(info);
+                        lots += lot;
+                    } else {
+                    }
+                }
+                while (mapLoader.isLoading()) {
+                    qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
+                }
+#endif
+                for (WorldCellLot *lot : lots) {
+                    MapInfo *info = MapManager::instance()->mapInfo(lot->mapName());
+                    if (info == nullptr)
+                        continue;
+                    if (info->map() == nullptr)
+                        continue;
+                    QString roomToneStr = info->properties().value(QLatin1String("RoomTone"));
+                    if (roomToneStr.isEmpty())
+                        continue;
+                    QPoint pointInRoom;
+                    int level;
+                    if (getPointInRoom(info->map(), pointInRoom, level) == false)
+                        continue;
+                    w.writeStartTable();
+                    w.setSuppressNewlines(true);
+                    w.writeKeyAndValue("name", QString());
+                    w.writeKeyAndValue("type", QLatin1String("RoomTone"));
+                    w.writeKeyAndValue("x", (origin.x() + cell->x()) * 300 + lot->x() + pointInRoom.x());
+                    w.writeKeyAndValue("y", (origin.y() + cell->y()) * 300 + lot->y() + pointInRoom.y());
+                    w.writeKeyAndValue("z", lot->level() + level);
+                    w.writeKeyAndValue("width", 1);
+                    w.writeKeyAndValue("height", 1);
+                    QStringList properties;
+                    properties << QLatin1String("RoomTone") << roomToneStr;
+                    properties << QLatin1String("EntireBuilding") << QLatin1String("true");
+                    if (properties.isEmpty() == false) {
+                        w.writeStartTable("properties");
+                        for (int i = 0; i < properties.size(); i += 2) {
+                            writePropertyKeyAndValue(properties[i].toUtf8(), properties[i + 1]);
+                        }
+                        w.writeEndTable();
+                    }
+                    w.writeEndTable();
+                    w.setSuppressNewlines(false);
+                }
+            }
+        }
+
+        w.writeEndTable();
+        w.writeEndDocument();
+    }
+
+    bool getPointInRoom(Tiled::Map *map, QPoint &point, int &level)
+    {
+        point = QPoint(0, 0);
+        for (Tiled::MapLevel *mapLevel : map->mapLevels()) {
+            for (Tiled::ObjectGroup *objectGroup : mapLevel->objectGroups()) {
+                if (objectGroup->name().contains(QLatin1String("RoomDefs"))) {
+                    point.setX(objectGroup->x() + objectGroup->width() / 2);
+                    point.setY(objectGroup->y() + objectGroup->height() / 2);
+                    level = mapLevel->level();
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     QString mError;
     World *mWorld;
     LuaTableWriter *w;
@@ -497,6 +592,22 @@ bool LuaWriter::writeWorldObjects(World *world, const QString &filePath)
         return false;
 
     d->writeWorldObjects(world, &file);
+
+    if (file.error() != QFile::NoError) {
+        d->mError = file.errorString();
+        return false;
+    }
+
+    return true;
+}
+
+bool LuaWriter::writeRoomTones(World *world, const QString &filePath)
+{
+    QFile file(filePath);
+    if (!d->openFile(&file))
+        return false;
+
+    d->writeRoomTones(world, &file);
 
     if (file.error() != QFile::NoError) {
         d->mError = file.errorString();

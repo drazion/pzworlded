@@ -276,6 +276,7 @@
     <addaction name="menuGenerate_Lots_8x8"/>
     <addaction name="actionLUAObjectDump"/>
     <addaction name="actionWriteObjects"/>
+    <addaction name="actionWriteRoomTonesToLua"/>
     <addaction name="separator"/>
     <addaction name="actionClose"/>
     <addaction name="actionCloseAll"/>
@@ -1020,6 +1021,11 @@
   <action name="actionZonesToPNG">
    <property name="text">
     <string>Zones To PNG...</string>
+   </property>
+  </action>
+  <action name="actionWriteRoomTonesToLua">
+   <property name="text">
+    <string>Write RoomTones to Lua...</string>
    </property>
   </action>
  </widget>

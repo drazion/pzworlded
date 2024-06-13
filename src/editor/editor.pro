@@ -102,6 +102,7 @@ SOURCES += main.cpp\
     mapmanager.cpp \
     basegraphicsview.cpp \
     progress.cpp \
+    writeroomtonesdialog.cpp \
     zoomable.cpp \
     scenetools.cpp \
     worldwriter.cpp \
@@ -218,6 +219,7 @@ HEADERS  += mainwindow.h \
     mapmanager.h \
     basegraphicsview.h \
     progress.h \
+    writeroomtonesdialog.h \
     zoomable.h \
     scenetools.h \
     worldwriter.h \
@@ -317,6 +319,7 @@ FORMS    += mainwindow.ui \
     gotodialog.ui \
     spawntooldialog.ui \
     propertyenumdialog.ui \
+    writeroomtonesdialog.ui \
     writespawnpointsdialog.ui \
     pngbuildingdialog.ui \
     lootwindow.ui \

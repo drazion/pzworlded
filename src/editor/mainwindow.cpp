@@ -36,6 +36,7 @@
 #include "lotfilesmanager.h"
 #include "lotfilesmanager256.h"
 #include "lotpackwindow.h"
+#include "luawriter.h"
 #include "mapcomposite.h"
 #include "mapimagemanager.h"
 #include "mapmanager.h"
@@ -70,6 +71,7 @@
 #include "worldscene.h"
 #include "worldview.h"
 #include "worldwriter.h"
+#include "writeroomtonesdialog.h"
 #include "writespawnpointsdialog.h"
 #include "writeworldobjectsdialog.h"
 #include "zoomable.h"
@@ -269,6 +271,7 @@ MainWindow::MainWindow(QWidget *parent)
             this, &MainWindow::TMXToBMPSelected);
     connect(ui->actionLUAObjectDump, &QAction::triggered, this, &MainWindow::WriteSpawnPoints);
     connect(ui->actionWriteObjects, &QAction::triggered, this, &MainWindow::WriteWorldObjects);
+    connect(ui->actionWriteRoomTonesToLua, &QAction::triggered, this, &MainWindow::WriteRoomTones);
     connect(ui->actionFromToAll, &QAction::triggered,
             this, &MainWindow::FromToAll);
     connect(ui->actionFromToSelected, &QAction::triggered,
@@ -1440,6 +1443,29 @@ void MainWindow::WriteWorldObjects()
 
     WriteWorldObjectsDialog d(worldDoc, this);
     d.exec();
+}
+
+void MainWindow::WriteRoomTones()
+{
+    WorldDocument *worldDoc = mCurrentDocument->asWorldDocument();
+    if (CellDocument *cellDoc = mCurrentDocument->asCellDocument())
+        worldDoc = cellDoc->worldDocument();
+
+    WriteRoomTonesDialog d(worldDoc, this);
+    int result = d.exec();
+    if (result != QDialog::Accepted)
+        return;
+
+    QString luaFileName = worldDoc->world()->getLuaSettings().roomTonesFile;
+    if (!luaFileName.isEmpty()) {
+        LuaWriter writer;
+        if (!writer.writeRoomTones(worldDoc->world(), luaFileName)) {
+            QMessageBox::warning(MainWindow::instance(), tr("Error saving RoomTone objects"),
+                                 tr("An error occurred saving the LUA objects file.\n%1\n\n%2")
+                                 .arg(writer.errorString())
+                                 .arg(QDir::toNativeSeparators(luaFileName)));
+        }
+    }
 }
 
 void MainWindow::updateWindowTitle()
@@ -2645,6 +2671,7 @@ void MainWindow::updateActions()
 
     ui->actionLUAObjectDump->setEnabled(worldDoc != 0);
     ui->actionWriteObjects->setEnabled(worldDoc != 0);
+    ui->actionWriteRoomTonesToLua->setEnabled(worldDoc != 0);
 
     ui->actionCopy->setEnabled(worldDoc);
     ui->actionPaste->setEnabled(worldDoc && !Clipboard::instance()->isEmpty());

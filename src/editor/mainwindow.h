@@ -99,6 +99,7 @@ public slots:
 
     void WriteSpawnPoints();
     void WriteWorldObjects();
+    void WriteRoomTones();
 
     void updateWindowTitle();
 

@@ -382,6 +382,11 @@ enum
         Church
         Office
         Factory
+        MovieTheater
+        Basement
+        Bunker
+        House
+        Commercial
     ]
     multi = false
 }

@@ -451,6 +451,10 @@ public:
         w.writeAttribute(QLatin1String("path"),
                          relativeFileName(settings.worldObjectsFile));
         w.writeEndElement();
+        w.writeStartElement(QLatin1String("roomTonesFile"));
+        w.writeAttribute(QLatin1String("path"),
+                         relativeFileName(settings.roomTonesFile));
+        w.writeEndElement();
         w.writeEndElement();
     }
 

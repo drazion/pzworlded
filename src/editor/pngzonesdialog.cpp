@@ -21,6 +21,8 @@
 #include "world.h"
 #include "worldcell.h"
 
+#include "InGameMap/clipper.hpp"
+
 #include <QDir>
 #include <QFileDialog>
 #include <QMessageBox>
@@ -68,13 +70,53 @@ errorExit:
     return false;
 }
 
+static QPolygonF createPolylineOutline(WorldCellObject *object)
+{
+    ClipperLib::ClipperOffset offset;
+    ClipperLib::Path path;
+    int SCALE = 100;
+    for (int i = 0; i < object->points().size(); i++) {
+        WorldCellObjectPoint p1 = object->points()[i];
+        path << ClipperLib::IntPoint(p1.x * SCALE, p1.y * SCALE);
+        if ((object->polylineWidth() % 2) != 0) {
+            ClipperLib::IntPoint cp = path[path.size()-1];
+            path[path.size()-1] = ClipperLib::IntPoint(cp.X + SCALE / 2, cp.Y + SCALE / 2);
+        }
+    }
+    offset.AddPath(path, ClipperLib::JoinType::jtMiter, ClipperLib::EndType::etOpenButt);
+    ClipperLib::Paths paths;
+    offset.Execute(paths, object->polylineWidth() * SCALE / 2.0);
+    QPolygonF result;
+    if (paths.empty()) {
+        return result;
+    }
+    int cellX = object->cell()->x();
+    int cellY = object->cell()->y();
+    ClipperLib::Path cPath = paths.at(0);
+    for (const auto &cPoint : cPath) {
+        result << QPointF(cellX * 300 + cPoint.X / (qreal) SCALE, cellY * 300.0 + cPoint.Y / (qreal) SCALE);
+    }
+    return result;
+}
+
 bool PNGZonesDialog::generateCell(WorldCell *cell)
 {
     QPainter *painter = mPainter;
+    QStringList validZones;
+    validZones << QLatin1String("DeepForest");
+    validZones << QLatin1String("Farm");
+    validZones << QLatin1String("FarmLand");
+    validZones << QLatin1String("Forest");
+    validZones << QLatin1String("Nav");
+    validZones << QLatin1String("TownZone");
+    validZones << QLatin1String("TrailerPark");
+    validZones << QLatin1String("Vegitation");
     for (WorldCellObject *object : cell->objects()) {
         if (object->group() == nullptr) {
             continue;
         }
+        if (validZones.contains(object->group()->name()) == false)
+            continue;
         QColor color = object->group()->color();
 //        color.setAlpha(50);
         painter->setBrush(QBrush(color));
@@ -83,6 +125,9 @@ bool PNGZonesDialog::generateCell(WorldCell *cell)
             QPointF p1(cell->x() * 300.0 + object->x(), cell->y() * 300.0 + object->y());
             QPointF p2(cell->x() * 300.0 + (object->x() + object->width()), cell->y() * 300.0 + (object->y() + object->height()));
             painter->drawRect(QRectF(p1, p2));
+        }
+        if (object->isPolyline()) {
+            painter->drawPolygon(createPolylineOutline(object));
         }
         if (object->isPolygon()) {
             QPolygonF poly;

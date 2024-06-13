@@ -1,5 +1,5 @@
 /*
- * Copyright 2012, Tim Baker <treectrl@users.sf.net>
+ * Copyright 2024, Tim Baker <treectrl@users.sf.net>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
@@ -15,32 +15,33 @@
  * this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef LUAWRITER_H
-#define LUAWRITER_H
+#ifndef WRITEROOMTONESDIALOG_H
+#define WRITEROOMTONESDIALOG_H
 
-#include <QString>
+#include <QDialog>
 
-class LuaWriterPrivate;
-class World;
+class WorldDocument;
 
-class QIODevice;
+namespace Ui {
+class WriteRoomTonesDialog;
+}
 
-class LuaWriter
+class WriteRoomTonesDialog : public QDialog
 {
-public:
-    LuaWriter();
-    ~LuaWriter();
+    Q_OBJECT
 
-    bool writeWorld(World *world, const QString &filePath);
-    bool writeSpawnPoints(World *world, const QString &filePath);
-    bool writeWorldObjects(World *world, const QString &filePath);
-    bool writeRoomTones(World *world, const QString &filePath);
-    QString errorString() const;
+public:
+    explicit WriteRoomTonesDialog(WorldDocument *worldDoc, QWidget *parent = nullptr);
+    ~WriteRoomTonesDialog();
+
+private slots:
+    void browse();
+    void accept();
 
 private:
-    void writeWorld(World *world, QIODevice *device, const QString &absDirPath);
-
-    LuaWriterPrivate *d;
+    Ui::WriteRoomTonesDialog *ui;
+    WorldDocument *mDocument;
+    QString mFileName;
 };
 
-#endif // LUAWRITER_H
+#endif // WRITEROOMTONESDIALOG_H

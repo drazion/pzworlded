@@ -142,11 +142,13 @@ class LuaSettings
 public:
     QString spawnPointsFile;
     QString worldObjectsFile;
+    QString roomTonesFile;
 
     bool operator == (const LuaSettings &other)
     {
         return spawnPointsFile == other.spawnPointsFile &&
-                worldObjectsFile == other.worldObjectsFile;
+                worldObjectsFile == other.worldObjectsFile &&
+                roomTonesFile == other.roomTonesFile;
     }
 
     bool operator != (const LuaSettings &other)
