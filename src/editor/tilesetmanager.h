@@ -190,6 +190,12 @@ public:
 
     void changeTilesetSource(Tileset *tileset, const QString &source, bool missing);
 
+    Tile *invisibleTile() const
+    { return mInvisibleTile; }
+
+    Tileset *invisibleTileset() const
+    { return mInvisibleTileset; }
+
     Tile *missingTile() const
     { return mMissingTile; }
 
@@ -207,6 +213,9 @@ public:
     void loadTileset(Tileset *tileset, const QString &imageSource);
     void waitForTilesets(const QList<Tileset *> &tilesets = QList<Tileset*>(), QWidget *parent = nullptr);
     int countLoadingTilesets(const QList<Tileset *> &tilesets) const;
+
+    void cachePZProperties(Tileset *cached);
+    void copyPZProperties(Tileset *src, Tileset *dst);
 #endif
 
 signals:
@@ -226,6 +235,7 @@ private slots:
 #ifdef ZOMBOID
     void imageLoaded(QImage *image, Tiled::Tileset *tileset);
     void imageLoaded(Tiled::Tileset *fromThread, Tiled::Tileset *tileset);
+    void tilePropertiesChanged();
 #endif
 
 private:
@@ -245,6 +255,9 @@ private:
 
 #ifdef ZOMBOID
     TilesetImageCache *mTilesetImageCache;
+
+    Tileset *mInvisibleTileset;
+    Tile *mInvisibleTile;
 
     Tileset *mMissingTileset;
     Tile *mMissingTile;

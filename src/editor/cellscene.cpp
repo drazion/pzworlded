@@ -832,6 +832,7 @@ void LayerGroupVBO::paint2(QPainter *painter, Tiled::MapRenderer *renderer, cons
 
         QList<QPoint> squares;
         getSquaresInRect(renderer, exposedRect, squares);
+        bool bShowInvisibleTiles = Preferences::instance()->showInvisibleTiles();
         {
             VBOTiles *currentTiles = nullptr;
             for (const QPoint& square : qAsConst(squares)) {
@@ -879,6 +880,8 @@ void LayerGroupVBO::paint2(QPainter *painter, Tiled::MapRenderer *renderer, cons
                         if ((tile.mHideIfVisible != nullptr) && isLotVisible(tile.mHideIfVisible))
                             continue;
                         if ((tile.mSubMap != nullptr) && (isLotVisible(tile.mSubMap) == false))
+                            continue;
+                        if (tile.mInvisible && (bShowInvisibleTiles == false))
                             continue;
                         if ((tile.mLayerIndex >= 0) && (tile.mLayerIndex < layerCount)) {
                             if (visibleLayers[tile.mLayerIndex] == false)
@@ -1053,6 +1056,10 @@ void LayerGroupVBO::gatherTiles(Tiled::MapRenderer *renderer, const QRectF& expo
     const int tileWidth = DISPLAY_TILE_WIDTH;
     const int tileHeight = DISPLAY_TILE_HEIGHT;
 
+    Tile *invisibleTile = Internal::TilesetManager::instance()->invisibleTile();
+    bool bShowInvisibleTiles = Preferences::instance()->showInvisibleTiles();
+    Tile *missingTile = Internal::TilesetManager::instance()->missingTile();
+
     QVector<TilePlusLayer> cells(40); // or QVarLengthArray
 
     for (const QPoint& point : qAsConst(rasterize.mPoints)) {
@@ -1080,6 +1087,12 @@ void LayerGroupVBO::gatherTiles(Tiled::MapRenderer *renderer, const QRectF& expo
                     if (cell.mTile == nullptr)
                         continue;
                     const Tile *tile = cell.mTile;
+                    if (tile->properties().contains(QStringLiteral("invisible"))) {
+                        tile = invisibleTile;
+                    }
+                    if (tile->image().isNull()) {
+                        tile = missingTile;
+                    }
                     Tileset *tileset = tile->tileset();
                     bool bJUMBO = tileset->name().contains(QStringLiteral("JUMBO_"));
                     VBOTile vboTile;
@@ -1091,6 +1104,7 @@ void LayerGroupVBO::gatherTiles(Tiled::MapRenderer *renderer, const QRectF& expo
                                           tile->atlasSize().width(), tile->atlasSize().height());
                     vboTile.mTilesetName = tileset->name();
                     vboTile.mAtlasUVST = tile->atlasUVST();
+                    vboTile.mInvisible = tile == invisibleTile;
 
                     if (bJUMBO) {
                         vboTile.mRect.translate(-tileWidth / 2, 0); // FIXME: Shouldn't Tiled::setZomboidTileOffset() take care of this? Possibly a TileScale=2 issue.
@@ -1418,6 +1432,8 @@ exposed = QRect(); // FIXME: flush area covered by whole VBOTiles
         if (exposed.isNull())
             exposed = mLayerGroup->boundingRect(mRenderer).toAlignedRect();
         mLayerGroup->prepareDrawing3(mRenderer, exposed);
+        Tileset *invisibleTileset = Internal::TilesetManager::instance()->invisibleTileset();
+        Tileset *missingTileset = Internal::TilesetManager::instance()->missingTileset();
 
         for (int y = 0; y < 3; y++) {
             for (int x = 0; x < 3; x++) {
@@ -1435,6 +1451,12 @@ exposed = QRect(); // FIXME: flush area covered by whole VBOTiles
                 }
 
                 mcVBO->mUsedTilesets = mc->usedTilesets();
+                if (mcVBO->mUsedTilesets.contains(invisibleTileset) == false) {
+                    mcVBO->mUsedTilesets += invisibleTileset;
+                }
+                if (mcVBO->mUsedTilesets.contains(missingTileset) == false) {
+                    mcVBO->mUsedTilesets += missingTileset;
+                }
                 mcVBO->mLayerNameToIndex.clear();
                 if (CompositeLayerGroup *rootLayerGroup = mc->root()->layerGroupForLevel(mLayerGroup->level())) {
                     for (int i = 0; i < rootLayerGroup->layerCount(); i++) {
@@ -4506,6 +4528,7 @@ CellScene::CellScene(QObject *parent)
     connect(prefs, &Preferences::gridColorChanged, this, [this]{this->update();});
     connect(prefs, &Preferences::showObjectsChanged, this, &CellScene::showObjectsChanged);
     connect(prefs, &Preferences::showObjectNamesChanged, this, &CellScene::showObjectNamesChanged);
+    connect(prefs, &Preferences::showInvisibleTilesChanged, this, &CellScene::showInvisibleTilesChanged);
 
     mHighlightCurrentLevel = prefs->highlightCurrentLevel();
 
@@ -5047,6 +5070,7 @@ void CellScene::loadMap()
 
     mRenderer->setMinLevel(mMapComposite->minLevel());
     mRenderer->setMaxLevel(mMapComposite->maxLevel());
+    mRenderer->setShowInvisibleTiles(Preferences::instance()->showInvisibleTiles());
     connect(mMapComposite, &MapComposite::layerGroupAdded,
             this, &CellScene::layerGroupAdded);
     connect(mMapComposite, &MapComposite::layerGroupAdded,
@@ -5629,6 +5653,12 @@ void CellScene::showObjectNamesChanged(bool show)
     Q_UNUSED(show)
     foreach (ObjectItem *item, mObjectItems)
         item->synchWithObject(); // just synch the label
+}
+
+void CellScene::showInvisibleTilesChanged(bool show)
+{
+    mRenderer->setShowInvisibleTiles(show);
+    update();
 }
 
 void CellScene::setHighlightCurrentLevel(bool highlight)

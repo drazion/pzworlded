@@ -134,6 +134,9 @@ QString BuildingMap::buildingTileAt(int x, int y, const QList<bool> visibleLevel
                         test = tlBlend->cellAt(tx, ty).tile; // building tile
                     if (test) {
                         Tile *realTile = test;
+                        if (test->properties().contains(QLatin1String("invisible"))) {
+                            test = TilesetManager::instance()->invisibleTile();
+                        }
                         if (test->image().isNull()) {
                             test = TilesetManager::instance()->missingTile();
                         }
@@ -682,6 +685,7 @@ void BuildingMap::BuildingToMap()
                    64, 32);
 
     // Add tilesets from Tilesets.txt
+    mMap->addTileset(TilesetManager::instance()->invisibleTileset());
     mMap->addTileset(TilesetManager::instance()->missingTileset());
     foreach (Tileset *ts, TileMetaInfoMgr::instance()->tilesets())
         mMap->addTileset(ts);

@@ -1184,6 +1184,7 @@ MapImageData MapImageRenderWorker::generateMapImage(MapComposite *mapComposite)
         return MapImageData();
     }
 
+    renderer->setShowInvisibleTiles(false);
     renderer->mAbortDrawing = workerThread()->var();
 
     // Don't draw empty levels

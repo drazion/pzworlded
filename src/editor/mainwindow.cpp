@@ -162,6 +162,7 @@ MainWindow::MainWindow(QWidget *parent)
     ui->actionSnapToGrid->setChecked(prefs->snapToGrid());
     ui->actionShowCoordinates->setChecked(prefs->showCoordinates());
     ui->actionShowGrid->setChecked(prefs->showWorldGrid());
+    ui->actionShowInvisibleTiles->setChecked(prefs->showInvisibleTiles());
     ui->actionShowMiniMap->setChecked(prefs->showMiniMap());
     ui->actionShowObjects->setChecked(prefs->showObjects());
     ui->actionShowObjectNames->setChecked(prefs->showObjectNames());
@@ -341,6 +342,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->actionZoomIn, &QAction::triggered, this, &MainWindow::zoomIn);
     connect(ui->actionZoomOut, &QAction::triggered, this, &MainWindow::zoomOut);
     connect(ui->actionZoomNormal, &QAction::triggered, this, &MainWindow::zoomNormal);
+    connect(ui->actionShowInvisibleTiles, &QAction::toggled, prefs, &Preferences::setShowInvisibleTiles);
 
     connect(ui->actionLotPackViewer, &QAction::triggered, this, &MainWindow::lotpackviewer);
     connect(ui->actionLootInspector, &QAction::triggered, this, &MainWindow::lootInspector);

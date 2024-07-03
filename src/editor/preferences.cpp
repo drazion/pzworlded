@@ -99,6 +99,7 @@ Preferences::Preferences()
     mUseOpenGL = mSettings->value(QLatin1String("OpenGL"), false).toBool();
     mWorldThumbnails = mSettings->value(QLatin1String("WorldThumbnails"), false).toBool();
     mShowAdjacentMaps = mSettings->value(QLatin1String("ShowAdjacentMaps"), true).toBool();
+    mShowInvisibleTiles = mSettings->value(QLatin1String("ShowInvisibleTiles"), true).toBool();
     mSettings->endGroup();
 
     mSettings->beginGroup(QLatin1String("MapsDirectory"));
@@ -484,4 +485,15 @@ QString Preferences::tiles2xDirectory() const
 QString Preferences::texturesDirectory() const
 {
     return QDir(mTilesDirectory).filePath(QLatin1String("Textures"));
+}
+
+void Preferences::setShowInvisibleTiles(bool show)
+{
+    if (mShowInvisibleTiles == show)
+        return;
+
+    mShowInvisibleTiles = show;
+    mSettings->setValue(QLatin1String("Interface/ShowInvisibleTiles"), mShowInvisibleTiles);
+
+    emit showInvisibleTilesChanged(mShowInvisibleTiles);
 }

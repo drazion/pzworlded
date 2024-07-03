@@ -681,6 +681,7 @@ struct VBOTile
     QString mTilesetName;
     Tiled::Tile::UVST mAtlasUVST;
     TilesetTexture *mTexture = nullptr;
+    bool mInvisible = false;
 };
 
 const int VBO_SQUARES = 10 * 3;
@@ -908,6 +909,7 @@ public slots:
     void gridColorChanged(const QColor &gridColor);
     void showObjectsChanged(bool show);
     void showObjectNamesChanged(bool show);
+    void showInvisibleTilesChanged(bool show);
     void setHighlightCurrentLevel(bool highlight);
     void highlightRoomUnderPointerChanged(bool highlight);
     void handlePendingUpdates();

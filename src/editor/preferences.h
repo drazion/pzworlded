@@ -93,6 +93,8 @@ public:
     bool showAdjacentMaps() const { return mShowAdjacentMaps; }
     void setShowAdjacentMaps(bool show);
 
+    bool showInvisibleTiles() const { return mShowInvisibleTiles; }
+
 signals:
     void snapToGridChanged(bool snapToGrid);
     void showCoordinatesChanged(bool showGrid);
@@ -121,6 +123,7 @@ signals:
     void showAdjacentMapsChanged(bool show);
     void highlightRoomUnderPointerChanged(bool highlight);
     void showOtherWorldsChanged(bool show);
+    void showInvisibleTilesChanged(bool show);
 
 public slots:
     void setSnapToGrid(bool snapToGrid);
@@ -139,6 +142,7 @@ public slots:
     void setHighlightCurrentLevel(bool highlight);
     void setHighlightRoomUnderPointer(bool highlight);
     void setShowOtherWorlds(bool show);
+    void setShowInvisibleTiles(bool show);
 
 private:
     Preferences();
@@ -172,6 +176,7 @@ private:
     bool mHighlightRoomUnderPointer;
     bool mShowOtherWorlds;
     QString mThumbnailsDirectory;
+    bool mShowInvisibleTiles;
 
     static Preferences *mInstance;
 };

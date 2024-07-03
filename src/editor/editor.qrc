@@ -78,5 +78,6 @@
         <file>images/idea.png</file>
         <file>images/24x24/insert-rectangle.png</file>
         <file>images/SpeakerIcon.png</file>
+        <file>images/invisible-tile.png</file>
     </qresource>
 </RCC>

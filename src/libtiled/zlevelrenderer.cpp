@@ -207,7 +207,8 @@ void ZLevelRenderer::drawGrid(QPainter *painter, const QRectF &rect, QColor grid
     }
 }
 
-static Tile *g_missing_tile = 0;
+static Tile *g_invisible_tile = nullptr;
+static Tile *g_missing_tile = nullptr;
 
 void ZLevelRenderer::drawTileLayer(QPainter *painter,
                                       const TileLayer *layer,
@@ -457,8 +458,21 @@ void ZLevelRenderer::drawTileLayerGroup(QPainter *painter, ZTileLayerGroup *laye
                     const Cell *cell = cells[i];
                     if (!cell->isEmpty()) {
                         Tile *tile = cell->tile;
+                        if (tile->properties().contains(QLatin1String("invisible"))) {
+                            if (isShowInvisibleTiles() == false)
+                                continue;
+                            if (g_invisible_tile == nullptr) {
+                                Tileset *ts = new Tileset(QLatin1String("INVISIBLE"), 64, 128);
+                                if (ts->loadFromImage(QImage(QLatin1String(":/images/invisible-tile.png")), QLatin1String(":/images/invisible-tile.png"))) {
+                                    g_invisible_tile = ts->tileAt(0);
+                                }
+                            }
+                            if (g_invisible_tile)
+                                tile = g_invisible_tile;
+
+                        }
                         if (tile->image().isNull()) {
-                            if (g_missing_tile == 0) {
+                            if (g_missing_tile == nullptr) {
                                 Tileset *ts = new Tileset(QLatin1String("MISSING"), 64, 128);
                                 if (ts->loadFromImage(QImage(QLatin1String(":/images/missing-tile.png")), QLatin1String(":/images/missing-tile.png"))) {
                                     g_missing_tile = ts->tileAt(0);
@@ -599,6 +613,11 @@ void ZLevelRenderer::drawMapObject(QPainter *painter,
         painter->drawRect(QRectF(paintOrigin, img.size()));
     } else {
         QColor brushColor = color;
+#if 1
+        if (color.alpha() != 255)
+            brushColor.setAlpha(color.alpha());
+        else
+#endif
         brushColor.setAlpha(50);
         QBrush brush(brushColor);
 

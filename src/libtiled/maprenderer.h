@@ -59,6 +59,7 @@ public:
         , mMinLevel(0)
         , mMaxLevel(0)
         , m2x(false)
+        , mShowInvisibleTiles(true)
     {}
 #else
     MapRenderer(const Map *map) : mMap(map) {}
@@ -208,6 +209,16 @@ public:
         return m2x;
     }
 
+    void setShowInvisibleTiles(bool show)
+    {
+        mShowInvisibleTiles = show;
+    }
+
+    bool isShowInvisibleTiles() const
+    {
+        return mShowInvisibleTiles;
+    }
+
 #endif
 
     QPolygonF tileToPixelCoords(const QPolygonF &polygon, int level = 0) const
@@ -268,6 +279,7 @@ private:
     int mMinLevel;
     int mMaxLevel;
     bool m2x;
+    bool mShowInvisibleTiles;
 #endif
 };
 

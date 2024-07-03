@@ -305,6 +305,7 @@
     </property>
     <addaction name="actionShowCoordinates"/>
     <addaction name="actionShowGrid"/>
+    <addaction name="actionShowInvisibleTiles"/>
     <addaction name="actionShowMiniMap"/>
     <addaction name="actionShowObjects"/>
     <addaction name="actionShowObjectNames"/>
@@ -1026,6 +1027,14 @@
   <action name="actionWriteRoomTonesToLua">
    <property name="text">
     <string>Write RoomTones to Lua...</string>
+   </property>
+  </action>
+  <action name="actionShowInvisibleTiles">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Show Invisible Tiles</string>
    </property>
   </action>
  </widget>
