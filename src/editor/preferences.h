@@ -64,6 +64,8 @@ public:
 
     QString tiles2xDirectory() const;
 
+    QStringList tilePropertiesFiles() const { return mTilePropertiesFiles; }
+
     QString texturesDirectory() const;
 
     QString thumbnailsDirectory() const
@@ -163,6 +165,7 @@ private:
     QString mConfigDirectory;
     QString mMapsDirectory;
     QString mTilesDirectory;
+    QStringList mTilePropertiesFiles;
     QString mOpenFileDirectory;
     QString mWorldMapXMLFile;
     bool mShowAdjacentMaps;

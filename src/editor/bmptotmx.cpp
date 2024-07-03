@@ -709,11 +709,12 @@ bool BMPToTMX::WriteMap(WorldCell *cell, int bmpIndex)
             blendLayers[blendLayer->name()] = blendLayer;
     }
 
-    foreach (LayerInfo layer, mLayers) {
+    for (const LayerInfo& layer : mLayers) {
         int level = 0;
         MapComposite::levelForLayer(layer.mName, &level);
+        QString layerName = MapComposite::layerNameWithoutPrefix(layer.mName);
         if (layer.mType == LayerInfo::Tile) {
-            TileLayer *tl = new TileLayer(layer.mName, 0, 0,
+            TileLayer *tl = new TileLayer(layerName, 0, 0,
                                           map.width(), map.height());
             tl->setLevel(level);
             map.addLayer(tl);
@@ -722,7 +723,7 @@ bool BMPToTMX::WriteMap(WorldCell *cell, int bmpIndex)
                     tl->setCells(0, 0, blendLayer);
             }
         } else if (layer.mType == LayerInfo::Object) {
-            ObjectGroup *og = new ObjectGroup(layer.mName, 0, 0,
+            ObjectGroup *og = new ObjectGroup(layerName, 0, 0,
                                               map.width(), map.height());
             og->setLevel(level);
             map.addLayer(og);

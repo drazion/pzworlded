@@ -69,7 +69,6 @@ private:
     CellScene *mScene;
     QList<SceneOverlay*> mOverlays;
     MapBuildings *mMapBuildings;
-    TileDefFile mTileDefFile;
     QList<TileDefTile*> mTileDefTiles;
 };
 

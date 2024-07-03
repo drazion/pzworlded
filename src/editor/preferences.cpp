@@ -125,6 +125,9 @@ Preferences::Preferences()
     mTilesDirectory = mSettings->value(QLatin1String("TilesDirectory"),
                                        tilesDirectory).toString();
 
+    // Use the same .tiles files as TileZed
+    mTilePropertiesFiles = settings.value(QLatin1String("TilePropertiesFiles")).toStringList();
+
     mOpenFileDirectory = mSettings->value(QLatin1String("OpenFileDirectory")).toString();
     mWorldMapXMLFile = mSettings->value(QLatin1String("WorldMapXMLFile")).toString();
 

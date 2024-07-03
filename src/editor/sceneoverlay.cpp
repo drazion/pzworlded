@@ -26,6 +26,8 @@
 #include "world.h"
 #include "worldcell.h"
 
+#include "BuildingEditor/buildingfloor.h"
+
 #include "maprenderer.h"
 #include "tile.h"
 //#include "tilelayer.h"
@@ -103,25 +105,25 @@ QPainterPath LightSwitchOverlay::shape() const
 LightSwitchOverlays::LightSwitchOverlays(CellScene *scene) :
     mScene(scene)
 {
-    QSettings settings;
+//    QSettings settings;
 //    QString d = settings.value(QLatin1String("LootWindow/GameDirectory")).toString();
-    QString fileName = Preferences::instance()->tilesDirectory() + QLatin1String("/newtiledefinitions.tiles");
-    if (QFileInfo(fileName).exists()) {
-        mTileDefFile.read(fileName);
 
-        qDebug() << "CellSceneOverlays parsing tiledef...";
-        QString lightswitch(QLatin1String("lightswitch"));
-        foreach (TileDefTileset *ts, mTileDefFile.tilesets()) {
-            foreach (TileDefTile *tdt, ts->mTiles) {
-                foreach (QString key, tdt->mProperties.keys()) {
+    qDebug() << "CellSceneOverlays parsing tiledef...";
+    Tiled::Internal::TileDefWatcher *tileDefWatcher = BuildingEditor::getTileDefWatcher();
+    tileDefWatcher->check();
+    QString lightswitch(QLatin1String("lightswitch"));
+    for (Internal::TileDefWatcherFile *watcherFile : tileDefWatcher->mFiles) {
+        for (TileDefTileset *ts : watcherFile->mTileDefFile->tilesets()) {
+            for (TileDefTile *tdt : ts->mTiles) {
+                for (const QString &key : tdt->mProperties.keys()) {
                     if (key == lightswitch) {
                         mTileDefTiles += tdt;
                     }
                 }
             }
         }
-        qDebug() << "CellSceneOverlays parsing tiledef DONE";
     }
+    qDebug() << "CellSceneOverlays parsing tiledef DONE";
 
     if (!LightbulbsMgr::hasInstance())
         new LightbulbsMgr();

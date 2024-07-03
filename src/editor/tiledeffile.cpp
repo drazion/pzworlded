@@ -17,6 +17,8 @@
 
 #include "tiledeffile.h"
 
+#include "tiledeftextfile.h"
+
 #include <QDataStream>
 #include <QDir>
 #include <QFile>
@@ -281,4 +283,24 @@ void TileDefTileset::resize(int columns, int rows)
     qDeleteAll(oldTiles);
 }
 
-/////
+///// ///// ///// ///// /////
+
+bool TileDefFileReader::read(const QString &fileName, TileDefFile &defFile)
+{
+    if (fileName.endsWith(QLatin1String(".txt"))) {
+        Tiled::Internal::TileDefTextFile textFile;
+        if (textFile.read(fileName) == false) {
+            defFile.setErrorString(textFile.errorString());
+            return false;
+        }
+        for (TileDefTileset *tileset : textFile.takeTilesets()) {
+            defFile.insertTileset(defFile.tilesets().size(), tileset);
+        }
+        defFile.setFileName(fileName.mid(0, fileName.length() - 4));
+        return true;
+    }
+    if (!defFile.read(fileName)) {
+        return false;
+    }
+    return true;
+}

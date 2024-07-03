@@ -82,6 +82,7 @@ SOURCES += main.cpp\
     navigation/isochunk256.cpp \
     navigation/isogridsquare256.cpp \
     pngzonesdialog.cpp \
+    tiledeftextfile.cpp \
     tilesetstxtfile.cpp \
     worldview.cpp \
     worldscene.cpp \
@@ -198,6 +199,7 @@ HEADERS  += mainwindow.h \
     navigation/isochunk256.h \
     navigation/isogridsquare256.h \
     pngzonesdialog.h \
+    tiledeftextfile.h \
     tilesetstxtfile.h \
     worldconstants.h \
     worldview.h \

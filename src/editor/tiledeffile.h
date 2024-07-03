@@ -138,6 +138,9 @@ public:
     QStringList tilesetNames() const
     { return mTilesetByName.keys(); }
 
+    void setErrorString(const QString &error)
+    { mError = error; }
+
     QString errorString() const
     { return mError; }
 
@@ -146,6 +149,12 @@ private:
     QMap<QString,TileDefTileset*> mTilesetByName;
     QString mFileName;
     QString mError;
+};
+
+class TileDefFileReader
+{
+public:
+    bool read(const QString &fileName, TileDefFile &tileDefFile);
 };
 
 #endif // TILEDEFFILE_H

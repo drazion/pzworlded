@@ -22,6 +22,7 @@
 #include "buildingtemplates.h"
 #include "buildingtiles.h"
 #include "furnituregroups.h"
+#include "preferences.h"
 #include "roofhiding.h"
 
 #if defined(Q_OS_WIN) && (_MSC_VER >= 1600)
@@ -2382,43 +2383,86 @@ template class __declspec(dllimport) QMap<QString, QString>;
 namespace Tiled {
 namespace Internal {
 
-TileDefWatcher::TileDefWatcher() :
-    mWatcher(new FileSystemWatcher(this)),
+TileDefWatcherFile::TileDefWatcherFile(const QString &filePath) :
+    mFilePath(filePath),
     mTileDefFile(new TileDefFile()),
-    tileDefFileChecked(false),
-    watching(false)
+    tileDefFileChecked(false)
+{
+
+}
+
+void TileDefWatcherFile::check(Tiled::Internal::FileSystemWatcher &watcher)
+{
+    if (tileDefFileChecked) {
+        return;
+    }
+    QFileInfo fileInfo(mFilePath);
+    if (fileInfo.exists()) {
+        qDebug() << "TileDefWatcher read " << fileInfo.absoluteFilePath();
+        TileDefFileReader reader;
+        reader.read(fileInfo.absoluteFilePath(), *mTileDefFile);
+        QString canonicalPath = fileInfo.canonicalFilePath();
+        if (watching != canonicalPath) {
+            watcher.addPath(canonicalPath);
+            watching = canonicalPath;
+        }
+    }
+    tileDefFileChecked = true;
+}
+
+/////
+
+TileDefWatcher::TileDefWatcher() :
+    mWatcher(new FileSystemWatcher(this))
 {
     connect(mWatcher, &FileSystemWatcher::fileChanged, this, &TileDefWatcher::fileChanged);
+#ifdef WORLDED
+    preferencesChanged(Preferences::instance()->tilePropertiesFiles());
+#else
+    connect(Preferences::instance(), &Preferences::tilePropertiesFilesChanged, this, &TileDefWatcher::preferencesChanged);
+    preferencesChanged(Tiled::Internal::Preferences::instance()->tilePropertiesFiles());
+#endif
 }
 
 
 void TileDefWatcher::check()
 {
-    if (!tileDefFileChecked) {
-        QFileInfo fileInfo(TileMetaInfoMgr::instance()->tilesDirectory() + QString::fromLatin1("/newtiledefinitions.tiles"));
-#if 0
-        QFileInfo info2(QLatin1String("D:/zomboid-svn/Anims2/workdir/media/newtiledefinitions.tiles"));
-        if (info2.exists())
-            fileInfo = info2;
-#endif
-        if (fileInfo.exists()) {
-            qDebug() << "TileDefWatcher read " << fileInfo.absoluteFilePath();
-            mTileDefFile->read(fileInfo.absoluteFilePath());
-            if (!watching) {
-                mWatcher->addPath(fileInfo.canonicalFilePath());
-                watching = true;
-            }
+    for (TileDefWatcherFile *watcherFile : mFiles) {
+        watcherFile->check(*mWatcher);
+    }
+}
+
+TileDefTileset *TileDefWatcher::tileset(const QString &tilesetName)
+{
+    for (TileDefWatcherFile *watcherFile : mFiles) {
+        if (TileDefTileset *tileset = watcherFile->mTileDefFile->tileset(tilesetName)) {
+            return tileset;
         }
-        tileDefFileChecked = true;
+    }
+    return nullptr;
+}
+
+void TileDefWatcher::preferencesChanged(const QStringList &tilePropertiesFiles)
+{
+    for (const QString &tilePropertiesFilePath : tilePropertiesFiles) {
+        QFileInfo fileInfo(tilePropertiesFilePath);
+        QString canonicalPath = fileInfo.canonicalFilePath();
+        if (mFiles.contains(canonicalPath)) {
+            continue;
+        }
+        TileDefWatcherFile *watcherFile = new TileDefWatcherFile(canonicalPath);
+        mFiles.insert(canonicalPath, watcherFile);
     }
 }
 
 void TileDefWatcher::fileChanged(const QString &path)
 {
     qDebug() << "TileDefWatcher.fileChanged() " << path;
-    tileDefFileChecked = false;
-    //        removePath(path);
-    //        addPath(path);
+    if (TileDefWatcherFile *watcherFile = mFiles[path]) {
+        watcherFile->tileDefFileChecked = false;
+//      removePath(path);
+//      addPath(path);
+    }
 }
 
 } // namespace Internal
@@ -2464,7 +2508,7 @@ static bool tileHasGrimeProperties(BuildingTile *btile, GrimeProperties *props)
         props->DoubleLeft = props->DoubleRight = false;
     }
 
-    if (TileDefTileset *tdts = tileDefWatcher->mTileDefFile->tileset(btile->mTilesetName)) {
+    if (TileDefTileset *tdts = tileDefWatcher->tileset(btile->mTilesetName)) {
         if (TileDefTile *tdt = tdts->tileAt(btile->mIndex)) {
             if (tdt->mProperties.contains(QString::fromLatin1("GrimeType"))) {
                 if (props) {

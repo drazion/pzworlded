@@ -445,9 +445,11 @@ BuildingMapEmptyOutsideFill::BuildingMapEmptyOutsideFill(Tiled::Map *map, Buildi
     mMap(map),
     mFloor(floor)
 {
+    TileDefWatcher *tileDefWatcher = getTileDefWatcher();
+    tileDefWatcher->check();
     const QString solidfloor(QStringLiteral("solidfloor"));
     for (Tiled::Tileset *tileset : map->tilesets()) {
-        TileDefTileset *tdts = getTileDefWatcher()->mTileDefFile->tileset(tileset->name());
+        TileDefTileset *tdts = tileDefWatcher->tileset(tileset->name());
         if (tdts == nullptr)
             continue;
         for (int i = 0; i < tileset->tileCount(); i++) {
