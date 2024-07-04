@@ -224,6 +224,14 @@ TileDefTileset *TileDefFile::tileset(const QString &name) const
     return 0;
 }
 
+QList<TileDefTileset *> TileDefFile::takeTilesets()
+{
+    QList<TileDefTileset*> tilesets = mTilesets;
+    mTilesets.clear();
+    mTilesetByName.clear();
+    return tilesets;
+}
+
 /////
 
 #ifndef WORLDED
@@ -287,6 +295,8 @@ void TileDefTileset::resize(int columns, int rows)
 
 bool TileDefFileReader::read(const QString &fileName, TileDefFile &defFile)
 {
+    qDeleteAll(defFile.takeTilesets());
+
     if (fileName.endsWith(QLatin1String(".txt"))) {
         Tiled::Internal::TileDefTextFile textFile;
         if (textFile.read(fileName) == false) {

@@ -97,7 +97,7 @@ LotFilesManager256::LotFilesManager256(QObject *parent) :
     mJumboZoneList += new JumboZone(QStringLiteral("Farm"), 80);
     mJumboZoneList += new JumboZone(QStringLiteral("FarmLand"), 80);
     mJumboZoneList += new JumboZone(QStringLiteral("Forest"), 50);
-    mJumboZoneList += new JumboZone(QStringLiteral("TownZone"), 80);
+//    mJumboZoneList += new JumboZone(QStringLiteral("TownZone"), 80);
     mJumboZoneList += new JumboZone(QStringLiteral("Vegitation"), 10);
 }
 
