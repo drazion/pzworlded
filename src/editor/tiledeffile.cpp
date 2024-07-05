@@ -20,6 +20,7 @@
 #include "tiledeftextfile.h"
 
 #include <QDataStream>
+#include <QDebug>
 #include <QDir>
 #include <QFile>
 
@@ -47,6 +48,10 @@ static QString ReadString(QDataStream &in)
     quint8 c = ' ';
     while (c != '\n') {
         in >> c;
+        if (in.status() != QDataStream::Status::Ok) {
+            qDebug() << "ReadString read past end of file?";
+            break;
+        }
         if (c != '\n')
             str += QLatin1Char(c);
     }

@@ -27,6 +27,8 @@
 #include "worldcell.h"
 #include "worlddocument.h"
 
+#include "BuildingEditor/roofhiding.h"
+
 #include "bmpblender.h"
 #include "mapobject.h"
 #include "objectgroup.h"
@@ -492,6 +494,10 @@ bool InGameMapFeatureGenerator::processObjectGroup(WorldCell *cell, ObjectGroup 
         if (mapObject->width() * mapObject->height() <= 0)
             continue;
 
+        if ((level <= 0) && BuildingEditor::RoofHiding::isEmptyOutside(mapObject->name())) {
+            continue;
+        }
+
         int x = qFloor(mapObject->x());
         int y = qFloor(mapObject->y());
         int w = qCeil(mapObject->x() + mapObject->width()) - x;
@@ -564,6 +570,10 @@ bool InGameMapFeatureGenerator::processObjectGroup(WorldCell *cell, MapInfo *map
     int level = objectGroup->level();
     level += levelOffset;
 
+    if (level < 0) {
+        return true;
+    }
+
     for (const MapObject *mapObject : objectGroup->objects()) {
 #if 0
         if (mapObject->name().isEmpty() || mapObject->type().isEmpty())
@@ -571,6 +581,10 @@ bool InGameMapFeatureGenerator::processObjectGroup(WorldCell *cell, MapInfo *map
 #endif
         if (mapObject->width() * mapObject->height() <= 0)
             continue;
+
+        if ((level <= 0) && BuildingEditor::RoofHiding::isEmptyOutside(mapObject->name())) {
+            continue;
+        }
 
         int x = qFloor(mapObject->x());
         int y = qFloor(mapObject->y());
@@ -607,7 +621,89 @@ bool InGameMapFeatureGenerator::traceBuildingOutline(WorldCell *cell, MapInfo *m
 {
     if (bounds.isEmpty())
         return true;
+#if 1
+    ClipperLib::Clipper clipper;
+    ClipperLib::Path path;
 
+    for (const QRect box : rects) {
+        path.clear();
+        path << ClipperLib::IntPoint(box.left(), box.top());
+        path << ClipperLib::IntPoint(box.right() + 1, box.top());
+        path << ClipperLib::IntPoint(box.right() + 1, box.bottom() + 1);
+        path << ClipperLib::IntPoint(box.left(), box.bottom() + 1);
+        clipper.AddPath(path, ClipperLib::ptSubject, true);
+    }
+
+    ClipperLib::PolyTree polyTree;
+    if (clipper.Execute(ClipperLib::ctDifference, polyTree, ClipperLib::PolyFillType::pftPositive) == false) {
+        return true;
+    }
+
+    std::map<ClipperLib::PolyNode*,pzPolygon*> polyMap;
+    std::vector<pzPolygon*> allPolygons;
+    for (ClipperLib::PolyNode* node = polyTree.GetFirst(); node != nullptr; node = node->GetNext()) {
+        if (node->IsHole()) {
+            pzPolygon *outer = polyMap[node->Parent];
+            outer->inner.push_back(node->Contour);
+        } else {
+            pzPolygon* poly = new pzPolygon();
+            poly->outer = node->Contour;
+            polyMap[node] = poly;
+            allPolygons.push_back(poly);
+        }
+    }
+
+    // FIXME: This may create multiple features each with an outer and zero or more holes.
+    //        It would be better if a single feature per building was created.
+    for (pzPolygon *poly : allPolygons) {
+        ClipperLib::Path path = poly->outer;
+        if (path.size() < 3) {
+            continue;
+        }
+
+        InGameMapFeature* feature = new InGameMapFeature(&cell->inGameMap());
+        InGameMapProperty property;
+        property.mKey = QStringLiteral("building");
+        QString LEGEND = QStringLiteral("Legend");
+        if (mapInfo->map()->properties().contains(LEGEND)) {
+            property.mValue = mapInfo->map()->property(LEGEND);
+        } else {
+            property.mValue = QStringLiteral("yes");
+        }
+        feature->properties() += property;
+        for (auto it = mapInfo->map()->properties().cbegin(); it != mapInfo->map()->properties().cend(); it++) {
+            if (it.key() == LEGEND) {
+                continue;
+            }
+            property.mKey = it.key();
+            property.mValue = it.value();
+            feature->properties() += property;
+        }
+        feature->mGeometry.mType = QStringLiteral("Polygon");
+        InGameMapCoordinates coords;
+        for (auto& point : path) {
+            coords += InGameMapPoint(point.X, point.Y);
+        }
+        feature->mGeometry.mCoordinates += coords;
+
+        if (poly->inner.empty() == false) {
+            for (auto& hole : poly->inner) {
+                if (hole.size() < 3) {
+                    continue;
+                }
+                coords.clear();
+                for (auto& point : hole) {
+                    coords += InGameMapPoint(point.X, point.Y);
+                }
+                feature->mGeometry.mCoordinates += coords;
+            }
+        }
+
+        mWorldDoc->addInGameMapFeature(cell, cell->inGameMap().features().size(), feature);
+    }
+
+    qDeleteAll(allPolygons);
+#else
     OutlineGrid grid;
     grid.setSize(bounds.width(), bounds.height());
     for (auto& rect : rects) {
@@ -652,7 +748,7 @@ bool InGameMapFeatureGenerator::traceBuildingOutline(WorldCell *cell, MapInfo *m
 
         mWorldDoc->addInGameMapFeature(cell, cell->inGameMap().features().size(), feature);
     });
-
+#endif
     return true;
 }
 

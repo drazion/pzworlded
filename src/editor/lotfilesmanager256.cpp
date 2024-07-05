@@ -32,6 +32,8 @@
 #include "worldconstants.h"
 #include "worlddocument.h"
 
+#include "BuildingEditor/roofhiding.h"
+
 #include "InGameMap/clipper.hpp"
 
 #include "navigation/chunkdatafile256.h"
@@ -1548,7 +1550,7 @@ bool LotFilesWorker256::processObjectGroup(CombinedCellMaps &combinedMaps, World
         QString name = mapObject->name();
         if (name.isEmpty())
             name = QLatin1String("unnamed");
-        if (level <= 0 && name.startsWith(QStringLiteral("emptyoutside"))) {
+        if ((level <= 0) && BuildingEditor::RoofHiding::isEmptyOutside(name)) {
             continue;
         }
         if (objectGroup->map()->orientation() == Map::Isometric) {
