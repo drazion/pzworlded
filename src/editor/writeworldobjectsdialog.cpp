@@ -18,11 +18,15 @@
 #include "writeworldobjectsdialog.h"
 #include "ui_writeworldobjectsdialog.h"
 
+#include "luawriter.h"
+#include "mainwindow.h"
 #include "world.h"
 #include "worlddocument.h"
 
 #include <QDir>
 #include <QFileDialog>
+#include <QMessageBox>
+#include <QPushButton>
 
 WriteWorldObjectsDialog::WriteWorldObjectsDialog(WorldDocument *worldDoc, QWidget *parent) :
     QDialog(parent),
@@ -34,6 +38,10 @@ WriteWorldObjectsDialog::WriteWorldObjectsDialog(WorldDocument *worldDoc, QWidge
     mFileName = mDocument->world()->getLuaSettings().worldObjectsFile;
     ui->fileName->setText(QDir::toNativeSeparators(mFileName));
     connect(ui->browse, &QAbstractButton::clicked, this, &WriteWorldObjectsDialog::browse);
+
+    connect(ui->buttonAccept, &QPushButton::clicked, this, &WriteWorldObjectsDialog::accept);
+    connect(ui->buttonCancel, &QPushButton::clicked, this, &WriteWorldObjectsDialog::reject);
+    connect(ui->buttonSave, &QPushButton::clicked, this, &WriteWorldObjectsDialog::writeObjectsLua);
 }
 
 WriteWorldObjectsDialog::~WriteWorldObjectsDialog()
@@ -65,4 +73,22 @@ void WriteWorldObjectsDialog::accept()
         mDocument->changeLuaSettings(settings);
 
     QDialog::accept();
+}
+
+void WriteWorldObjectsDialog::writeObjectsLua()
+{
+    QString luaFileName = mFileName;
+    if (!luaFileName.isEmpty()) {
+        LuaWriter writer;
+        if (!writer.writeWorldObjects(mDocument->world(), luaFileName)) {
+            QMessageBox::warning(MainWindow::instance(), tr("Error saving objects"),
+                                 tr("An error occurred saving the LUA objects file.\n%1\n\n%2")
+                                 .arg(writer.errorString())
+                                 .arg(QDir::toNativeSeparators(luaFileName)));
+        } else {
+            QMessageBox::information(MainWindow::instance(), tr("Saved objects"),
+                                 tr("Saved the LUA objects file.\n%1")
+                                 .arg(QDir::toNativeSeparators(luaFileName)));
+        }
+    }
 }

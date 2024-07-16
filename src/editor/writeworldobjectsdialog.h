@@ -18,6 +18,7 @@
 #ifndef WRITEWORLDOBJECTSDIALOG_H
 #define WRITEWORLDOBJECTSDIALOG_H
 
+#include <QAbstractButton>
 #include <QDialog>
 
 class WorldDocument;
@@ -36,7 +37,8 @@ public:
 
 private slots:
     void browse();
-    void accept();
+    void accept() override;
+    void writeObjectsLua();
 
 private:
     Ui::WriteWorldObjectsDialog *ui;
