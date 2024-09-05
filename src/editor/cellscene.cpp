@@ -4975,6 +4975,40 @@ void CellScene::keyPressEvent(QKeyEvent *event)
     QGraphicsScene::keyPressEvent(event);
 }
 
+static int calculateLayerInsertIndex(MapLevel *mapLevel, TileLayer *layer, const QStringList &defaultLayerNames)
+{
+    int index1 = defaultLayerNames.indexOf(layer->name());
+    int minIndexAbove = -1;
+    for (int i = mapLevel->layerCount() - 1; i >= 0; i--) {
+        Layer *layer2 = mapLevel->layerAt(i);
+        int index = defaultLayerNames.indexOf(layer2->name());
+        if (index != -1 && index < index1) {
+            return i + 1;
+        }
+        if (index != -1 && index > index1) {
+            minIndexAbove = i;
+        }
+    }
+    if (minIndexAbove != -1) {
+        return minIndexAbove;
+    }
+#if 0
+    for (int i = index1 + 1; i < defaultLayerNames.size(); i++) {
+        int index = mapLevel->indexOfLayer(defaultLayerNames[i]);
+        if (index != -1) {
+            return index;
+        }
+    }
+    for (int i = index1 - 1; i >= 0; i--) {
+        int index = mapLevel->indexOfLayer(defaultLayerNames[i]);
+        if (index != -1) {
+            return index + 1;
+        }
+    }
+#endif
+    return mapLevel->layerCount();
+}
+
 void CellScene::loadMap()
 {
     mPendingDefer = true;
@@ -5038,21 +5072,24 @@ void CellScene::loadMap()
 #if 1
     // Add any missing default tile layers so the user can hide/show them in the Layers Dock.
     // FIXME: mMap is shared, is this safe?
-    for (int level = MIN_WORLD_LEVEL; level <= MAX_WORLD_LEVEL; level++)
-    {
+    for (int level = MIN_WORLD_LEVEL; level <= MAX_WORLD_LEVEL; level++) {
         QStringList defaultLayerNames = BuildingEditor::BuildingTMX::instance()->tileLayerNamesForLevel(level);
         for (const QString& layerName : defaultLayerNames) {
             QString withoutPrefix = MapComposite::layerNameWithoutPrefix(layerName);
             QString withPrefix = QStringLiteral("%1_%2").arg(level).arg(withoutPrefix);
             MapLevel *mapLevel = mMap->mapLevelForZ(level);
             if (mapLevel) {
-                if (mapLevel->indexOfLayer(withoutPrefix, Layer::TileLayerType) != -1)
+                if (mapLevel->indexOfLayer(withoutPrefix, Layer::TileLayerType) != -1) {
                     continue;
+                }
+            } else {
+                mapLevel = new MapLevel(mMap, level);
+                mMap->addMapLevel(mapLevel);
             }
             TileLayer* layer = new TileLayer(withoutPrefix, 0, 0, 300, 300);
             layer->setLevel(level);
-            mMap->addLayer(layer);
-//            mMap->insertLayer(mMap->layerCount(), layer);
+            int index = calculateLayerInsertIndex(mapLevel, layer, defaultLayerNames);
+            mapLevel->insertLayer(index, layer);
         }
     }
 #endif

@@ -20,6 +20,7 @@ public:
     {
         ObjectType,
         LotFileName,
+        PropertyDef,
     };
 
     SearchResults()
@@ -37,6 +38,8 @@ public:
     SearchBy searchBy;
     QString searchStringObjectType;
     QString searchStringLotFileName;
+    QString searchStringPropertyDef;
+    QString searchStringPropertyValue;
     QList<WorldCell*> cells;
     WorldCell* selectedCell;
 };
@@ -57,8 +60,10 @@ public:
 private slots:
     void comboActivated1(int index);
     void comboActivated2(int index);
+    void textChanged();
     void searchObjectType();
     void searchLotFileName();
+    void searchPropertyDef();
     void setList(SearchResults* results);
     void listSelectionChanged();
     void listActivated(const QModelIndex& index);

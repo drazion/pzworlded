@@ -203,4 +203,7 @@ public:
     QString mDescription;
 };
 
+#include <QMetaType>
+Q_DECLARE_METATYPE(PropertyDef*)
+
 #endif // PROPERTYHOLDER_H

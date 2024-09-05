@@ -18,14 +18,13 @@
 #include "searchdock.h"
 #include "ui_searchdock.h"
 
+#include "basegraphicsview.h"
 #include "celldocument.h"
 #include "documentmanager.h"
-#include "mainwindow.h"
 #include "world.h"
 #include "worldcell.h"
 #include "worlddocument.h"
 #include "worldscene.h"
-#include "worldview.h"
 
 #include <QListWidget>
 #include <QListWidgetItem>
@@ -43,7 +42,7 @@ SearchDock::SearchDock(QWidget* parent)
 
     connect(ui->combo1, QOverload<int>::of(&QComboBox::activated), this, &SearchDock::comboActivated1);
     connect(ui->combo2, QOverload<int>::of(&QComboBox::activated), this, &SearchDock::comboActivated2);
-    connect(ui->lineEdit, &QLineEdit::textChanged, this, &SearchDock::searchLotFileName);
+    connect(ui->lineEdit, &QLineEdit::textChanged, this, &SearchDock::textChanged);
 
     connect(ui->listWidget, &QListWidget::itemSelectionChanged, this, &SearchDock::listSelectionChanged);
     connect(ui->listWidget, &QListWidget::activated, this, &SearchDock::listActivated);
@@ -93,6 +92,14 @@ void SearchDock::setDocument(Document *doc)
         ui->lineEdit->setText(results->searchStringLotFileName);
         ui->combo2->setVisible(false);
         ui->lineEdit->setVisible(true);
+    } else if (results->searchBy == SearchResults::SearchBy::PropertyDef) {
+        int index = ui->combo2->findText(results->searchStringPropertyDef);
+        if (index == -1)
+            index = 0; // Select <None>
+        ui->combo2->setCurrentIndex(index);
+        ui->combo2->setVisible(true);
+        ui->lineEdit->setText(results->searchStringPropertyValue);
+        ui->lineEdit->setVisible(true);
     }
 }
 
@@ -127,10 +134,10 @@ void SearchDock::comboActivated1(int index)
 
     if (index == static_cast<int>(SearchResults::SearchBy::ObjectType)) {
         setCombo2(SearchResults::SearchBy::ObjectType);
-        int index = ui->combo2->findText(results->searchStringObjectType);
-        if (index == -1)
-            index = 0; // Select <None>
-        ui->combo2->setCurrentIndex(index);
+        int index1 = ui->combo2->findText(results->searchStringObjectType);
+        if (index1 == -1)
+            index1 = 0; // Select <None>
+        ui->combo2->setCurrentIndex(index1);
         ui->combo2->setVisible(true);
         ui->lineEdit->setVisible(false);
         searchObjectType();
@@ -141,12 +148,47 @@ void SearchDock::comboActivated1(int index)
         ui->lineEdit->setVisible(true);
         searchLotFileName();
     }
+    if (index == static_cast<int>(SearchResults::SearchBy::PropertyDef)) {
+        setCombo2(SearchResults::SearchBy::PropertyDef);
+        int index1 = ui->combo2->findText(results->searchStringPropertyDef);
+        if (index1 == -1)
+            index1 = 0;
+        ui->combo2->setCurrentIndex(index1);
+        ui->combo2->setVisible(true);
+        ui->lineEdit->setText(results->searchStringPropertyValue);
+        ui->lineEdit->setVisible(true);
+        searchPropertyDef();
+    }
 }
 
 void SearchDock::comboActivated2(int index)
 {
     Q_UNUSED(index);
-    searchObjectType();
+
+    WorldDocument *worldDoc = worldDocument();
+    if (worldDoc == nullptr)
+        return;
+
+    if (ui->combo1->currentIndex() == static_cast<int>(SearchResults::SearchBy::ObjectType)) {
+        searchObjectType();
+    }
+    if (ui->combo1->currentIndex() == static_cast<int>(SearchResults::SearchBy::PropertyDef)) {
+        searchPropertyDef();
+    }
+}
+
+void SearchDock::textChanged()
+{
+    WorldDocument *worldDoc = worldDocument();
+    if (worldDoc == nullptr)
+        return;
+
+    if (ui->combo1->currentIndex() == static_cast<int>(SearchResults::SearchBy::LotFileName)) {
+        searchLotFileName();
+    }
+    if (ui->combo1->currentIndex() == static_cast<int>(SearchResults::SearchBy::PropertyDef)) {
+        searchPropertyDef();
+    }
 }
 
 void SearchDock::searchObjectType()
@@ -199,11 +241,59 @@ void SearchDock::searchLotFileName()
             if (cell == nullptr)
                 continue;
             for (WorldCellLot* lot : cell->lots()) {
-                if (lot->mapName().contains(results->searchStringLotFileName, Qt::CaseInsensitive)) {
-                    // FIXME: If the world is resized, these cells may be destroyed.
-                    results->cells += cell;
-                    break;
+                if (results->searchStringLotFileName.trimmed().isEmpty()) {
+                    if (lot->mapName().isEmpty() == false) {
+                        continue;
+                    }
+                } else if (lot->mapName().contains(results->searchStringLotFileName, Qt::CaseInsensitive) == false) {
+                    continue;
                 }
+                // FIXME: If the world is resized, these cells may be destroyed.
+                results->cells += cell;
+                break;
+            }
+        }
+    }
+
+    setList(results);
+}
+
+void SearchDock::searchPropertyDef()
+{
+    WorldDocument *worldDoc = worldDocument();
+    if (worldDoc == nullptr)
+        return;
+    World* world = worldDoc->world();
+
+    PropertyDef* propertyDef = ui->combo2->currentData().value<PropertyDef*>();
+
+    SearchResults* results = searchResultsFor(worldDoc);
+    results->reset();
+    results->searchBy = SearchResults::SearchBy::PropertyDef;
+    results->searchStringPropertyDef = propertyDef->mName;
+    results->searchStringPropertyValue = ui->lineEdit->text();
+
+    for (int y = 0; y < world->height(); y++) {
+        for (int x = 0; x < world->width(); x++) {
+            WorldCell* cell = world->cellAt(x, y);
+            if (cell == nullptr) {
+                continue;
+            }
+            for (WorldCellObject* obj : cell->objects()) {
+                Property *property = obj->properties().find(propertyDef);
+                if (property == nullptr) {
+                    continue;
+                }
+                if (results->searchStringPropertyValue.trimmed().isEmpty()) {
+                    if (property->mValue.isEmpty() == false) {
+                        continue;
+                    }
+                } else if (property->mValue.contains(results->searchStringPropertyValue, Qt::CaseInsensitive) == false) {
+                    continue;
+                }
+                // FIXME: If the world is resized, these cells may be destroyed.
+                results->cells += cell;
+                break;
             }
         }
     }
@@ -304,6 +394,11 @@ void SearchDock::setCombo2(SearchResults::SearchBy searchBy)
                 ui->combo2->addItem(QLatin1String("<None>"), QVariant::fromValue(objType));
             else
                 ui->combo2->addItem(objType->name(), QVariant::fromValue(objType));
+        }
+    }
+    if (searchBy == SearchResults::SearchBy::PropertyDef) {
+        for (PropertyDef *propertyDef : world->propertyDefinitions()) {
+            ui->combo2->addItem(propertyDef->mName, QVariant::fromValue(propertyDef));
         }
     }
 }

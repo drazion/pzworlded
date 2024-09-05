@@ -33,6 +33,11 @@
         <string>Lot file name</string>
        </property>
       </item>
+      <item>
+       <property name="text">
+        <string>Property definition</string>
+       </property>
+      </item>
      </widget>
     </item>
     <item>
