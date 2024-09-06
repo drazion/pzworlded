@@ -4539,7 +4539,7 @@ CellScene::CellScene(QObject *parent)
     mMapBordersItem->setZValue(ZVALUE_GRID - 1);
 //    addItem(mMapBordersItem);
 
-
+    mWaterFlowOverlay->setZValue(ZVALUE_GRID - 1);
 }
 
 CellScene::~CellScene()
@@ -6876,7 +6876,8 @@ QRectF AdjacentMap::lotSceneBounds(WorldCellLot *lot)
 
 void AdjacentMap::setZOrder()
 {
-    int z = scene()->mapComposite()->maxLevel() + 1;
+    int numLevels = scene()->mapComposite()->maxLevel() - scene()->mapComposite()->minLevel() + 1;
+    int z = numLevels + 1;
     mObjectItemParent->setZValue(z);
     mInGameMapFeatureParent->setZValue(z + 1);
 
@@ -6886,7 +6887,7 @@ void AdjacentMap::setZOrder()
         WorldCellObject *obj = item->object();
         int groupIndex = groups.indexOf(obj->group());
         item->setZValue(0
-                        + groups.size() * mObjectItems.size() * obj->level()
+                        + groups.size() * mObjectItems.size() * (WORLD_GROUND_LEVEL + obj->level())
                         + groupIndex * mObjectItems.size()
                         + objectIndex++);
     }
