@@ -54,6 +54,18 @@ void ColorButton::setColor(const QColor &color)
     painter.setPen(border);
     painter.drawRect(0, 0, pixmap.width() - 1, pixmap.height() - 1);
 
+    if (mColor.alpha() == 0) {
+        int w = size.width() / 2;
+        int h = size.height() / 2;
+        painter.setPen(Qt::NoPen);
+        painter.fillRect(QRect(0, 0, w, h), Qt::darkGray);
+        painter.fillRect(QRect(w, 0, w, h), Qt::lightGray);
+        painter.fillRect(QRect(w, h, w, h), Qt::darkGray);
+        painter.fillRect(QRect(0, h, w, h), Qt::lightGray);
+    }
+
+    painter.end();
+
     setIcon(QIcon(pixmap));
 
     emit colorChanged(color);

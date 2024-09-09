@@ -40,17 +40,50 @@ public:
 
 private:
     bool generateWorld(World *world);
-    bool generateCell(WorldCell *cell);
+    bool generateCell(WorldCell *cell, const QStringList &objectTypes, const QList<QColor> &colors);
 
 private slots:
     void accept();
     void browse();
+    void selectionChanged();
+    void colorChanged(const QColor &color);
+    void imageBGColorChanged(const QColor &color);
+    void imageTransparentChanged(int state);
+    void saveAs();
+    void load();
 
 private:
     Ui::PNGZonesDialog *ui;
     World *mWorld;
     QImage mImage;
     QPainter *mPainter;
+    QString mSettingsFilePath;
+    QString mError;
+};
+
+class PNGObjectFileSettings
+{
+public:
+    QString mOutputFilePath;
+    QColor mBackgroundColor;
+};
+
+class PNGObjectFileValue
+{
+public:
+    QString mName;
+    QColor mColor;
+};
+
+class PNGObjectsFile
+{
+public:
+    bool read(const QString& filePath, PNGObjectFileSettings &settings, QList<PNGObjectFileValue> &values);
+    bool write(const QString& filePath, const PNGObjectFileSettings &settings, const QList<PNGObjectFileValue> &values);
+
+    bool parseColor(const QString &colorStr, int lineNumber, QColor &result);
+    QString colorString(const QColor &color);
+
     QString mError;
 };
 

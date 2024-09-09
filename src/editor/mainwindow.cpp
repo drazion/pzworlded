@@ -420,7 +420,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->documentTabWidget, &QTabWidget::tabCloseRequested,
             this, &MainWindow::documentCloseRequested);
 
-    enableDeveloperFeatures();
+//    enableDeveloperFeatures();
 
     Progress::instance()->setMainWindow(this);
 
