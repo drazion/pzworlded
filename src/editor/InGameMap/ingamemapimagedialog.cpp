@@ -21,6 +21,7 @@
 #include "celldocument.h"
 #include "chunkmap.h"
 #include "documentmanager.h"
+#include "simplefile.h"
 #include "world.h"
 #include "worlddocument.h"
 
@@ -30,6 +31,12 @@
 #include <QDebug>
 #include <QFileDialog>
 #include <QImage>
+#include <QMessageBox>
+#include <QSettings>
+
+static QLatin1String KEY_MAP_PATH("InGameMapImageDialog/MapPath");
+static QLatin1String KEY_RULES_PATH("InGameMapImageDialog/RulesPath");
+static QLatin1String KEY_OUTPUT_PATH("InGameMapImageDialog/OutputPath");
 
 InGameMapImageDialog::InGameMapImageDialog(QWidget *parent) :
     QDialog(parent),
@@ -47,10 +54,20 @@ InGameMapImageDialog::InGameMapImageDialog(QWidget *parent) :
     ui->radioButton256->setChecked(true);
 
     connect(ui->buttonBrowseMap, &QToolButton::clicked, this, &InGameMapImageDialog::chooseMapDirectory);
+    connect(ui->buttonBrowseRules, &QToolButton::clicked, this, &InGameMapImageDialog::chooseRulesFile);
     connect(ui->buttonBrowseImage, &QToolButton::clicked, this, &InGameMapImageDialog::chooseOutputFile);
     connect(ui->buttonCreateImage, &QPushButton::clicked, this, &InGameMapImageDialog::clickedTheButton);
+    connect(ui->buttonClose, &QPushButton::clicked, this, &InGameMapImageDialog::close);
 
     ui->statusLabel->setText(QStringLiteral("Click the button below to begin."));
+
+    QSettings qSettings;
+    QString mapPath = qSettings.value(KEY_MAP_PATH).toString();
+    QString rulesPath = qSettings.value(KEY_RULES_PATH).toString();
+    QString outputPath = qSettings.value(KEY_OUTPUT_PATH).toString();
+    ui->inputMapPath->setText(mapPath);
+    ui->rulesFilePath->setText(rulesPath);
+    ui->outputImagePath->setText(outputPath);
 }
 
 InGameMapImageDialog::~InGameMapImageDialog()
@@ -66,6 +83,20 @@ void InGameMapImageDialog::chooseMapDirectory()
         return;
     }
     ui->inputMapPath->setText(QDir::toNativeSeparators(f));
+    QSettings qSettings;
+    qSettings.setValue(KEY_MAP_PATH, f);
+}
+
+void InGameMapImageDialog::chooseRulesFile()
+{
+    QString f = QFileDialog::getOpenFileName(this, tr("Choose rules file"),
+                                             ui->rulesFilePath->text(), QLatin1String("Text Files (*.txt)"));
+    if (f.isEmpty()) {
+        return;
+    }
+    ui->rulesFilePath->setText(QDir::toNativeSeparators(f));
+    QSettings qSettings;
+    qSettings.setValue(KEY_RULES_PATH, f);
 }
 
 void InGameMapImageDialog::chooseOutputFile()
@@ -76,6 +107,8 @@ void InGameMapImageDialog::chooseOutputFile()
         return;
     }
     ui->outputImagePath->setText(QDir::toNativeSeparators(f));
+    QSettings qSettings;
+    qSettings.setValue(KEY_OUTPUT_PATH, f);
 }
 
 void InGameMapImageDialog::clickedTheButton()
@@ -86,11 +119,26 @@ void InGameMapImageDialog::clickedTheButton()
     }
 
     QString inputPath = ui->inputMapPath->text().trimmed();
+    QString rulesPath = ui->rulesFilePath->text().trimmed();
     QString outputPath = ui->outputImagePath->text().trimmed();
     if (inputPath.isEmpty() || !QDir(inputPath).exists()) {
         return;
     }
+    if (rulesPath.isEmpty() || !QFile::exists(rulesPath)) {
+        return;
+    }
     if (outputPath.isEmpty() || !outputPath.toLower().endsWith(QStringLiteral(".png"))) {
+        return;
+    }
+
+    mRules.clear();
+    MapToPNGFile file;
+    MapToPNGFileSettings settings2;
+    if (file.read(rulesPath, settings2, mRules) == false) {
+        QMessageBox::critical(this, tr("It's no good, Jim!"),
+                              tr("Error while reading %1\n%2")
+                              .arg(rulesPath)
+                              .arg(file.mError));
         return;
     }
 
@@ -236,6 +284,25 @@ void InGameMapImageDialog::tileToImage(QImage &image, const BuildingEditor::Buil
         return; // failed to parse the tile name
     }
     int tileIndex = buildingTile.mIndex;
+#if 1
+    for (int i = mRules.size() - 1; i >= 0; i--) {
+        const MapToPNGFileRule &rule = mRules[i];
+        if ((rule.mTilesetCompare == QLatin1String("contains")) && (buildingTile.mTilesetName.contains(rule.mTileset) == false)) {
+            continue;
+        }
+        if ((rule.mTilesetCompare == QLatin1String("equals")) && (buildingTile.mTilesetName != rule.mTileset)) {
+            continue;
+        }
+        if ((rule.mTilesetCompare == QLatin1String("startsWith")) && (buildingTile.mTilesetName.startsWith(rule.mTileset) == false)) {
+            continue;
+        }
+        if ((rule.mTileIndexMin >= 0) && ((tileIndex < rule.mTileIndexMin) || (tileIndex > rule.mTileIndexMax))) {
+            continue;
+        }
+        image.setPixel(pixelX, pixelY, qRgba(rule.mColor.red(), rule.mColor.green(), rule.mColor.blue(), rule.mColor.alpha()));
+        break;
+    }
+#else
     if (buildingTile.mTilesetName.contains(QStringLiteral("_trees"))) {
         image.setPixel(pixelX, pixelY, qRgb(38, 53, 22)); // normaltree
     }
@@ -289,4 +356,170 @@ void InGameMapImageDialog::tileToImage(QImage &image, const BuildingEditor::Buil
     if (buildingTile.mTilesetName.startsWith(QStringLiteral("walls_"))) {
         image.setPixel(pixelX, pixelY, qRgb(93, 44, 39)); // walls
     }
+#endif
+}
+
+/////
+
+const int VERSION_LATEST = 1;
+
+bool MapToPNGFile::read(const QString &filePath, MapToPNGFileSettings &settings, QList<MapToPNGFileRule> &rules)
+{
+    SimpleFile simpleFile;
+    if (!simpleFile.read(filePath)) {
+        mError = simpleFile.errorString();
+        return false;
+    }
+    for (SimpleFileBlock block : simpleFile.blocks) {
+        SimpleFileKeyValue kv;
+        if (block.name == QLatin1String("rule")) {
+            MapToPNGFileRule rule;
+            rule.mRuleName = block.value("name").trimmed();
+            if (rule.mRuleName.isEmpty()) {
+                mError = QString::fromLatin1("Line %1: Empty or missing name").arg(block.lineNumber);
+                return false;
+            }
+            QString tilesetStr = block.value("tileset").trimmed();
+            if (tilesetStr.isEmpty()) {
+                mError = QString::fromLatin1("Line %1: Empty or missing tileset").arg(block.lineNumber);
+                return false;
+            }
+            QStringList tilesetArgs = tilesetStr.split(QLatin1String(" "), Qt::SkipEmptyParts);
+            if (tilesetArgs.size() != 2) {
+                mError = QString::fromLatin1("Line %1: Expected two tileset arguments").arg(block.lineNumber);
+                return false;
+            }
+            rule.mTilesetCompare = tilesetArgs[0].trimmed();
+            if (rule.mTilesetCompare == QLatin1String("contains") ||
+                    rule.mTilesetCompare == QLatin1String("equals") ||
+                    rule.mTilesetCompare == QLatin1String("startsWith")) {
+                // ok
+            } else {
+                mError = QString::fromLatin1("Line %1: Unknown tileset compare").arg(block.lineNumber);
+                return false;
+            }
+            rule.mTileset = tilesetArgs[1].trimmed();
+            QString tileRangeStr = block.value("tileRange").trimmed();
+            if (tileRangeStr.isEmpty()) {
+                rule.mTileIndexMin = -1;
+                rule.mTileIndexMax = -1;
+            } else {
+                QStringList tileRangeArgs = tileRangeStr.split(QLatin1String(" "), Qt::SkipEmptyParts);
+                if (tileRangeArgs.size() != 2) {
+                    mError = QString::fromLatin1("Line %1: Expected two tilerange arguments").arg(block.lineNumber);
+                    return false;
+                }
+                bool ok = false;
+                rule.mTileIndexMin = tileRangeArgs[0].toInt(&ok);
+                if (ok == false) {
+                    mError = QString::fromLatin1("Line %1: Invalid tilerange arguments").arg(block.lineNumber);
+                    return false;
+                }
+                rule.mTileIndexMax = tileRangeArgs[1].toInt(&ok);
+                if (ok == false) {
+                    mError = QString::fromLatin1("Line %1: Invalid tilerange arguments").arg(block.lineNumber);
+                    return false;
+                }
+                if ((rule.mTileIndexMin < 0) || (rule.mTileIndexMax < 0) || (rule.mTileIndexMin > rule.mTileIndexMax)) {
+                    mError = QString::fromLatin1("Line %1: Invalid tilerange arguments").arg(block.lineNumber);
+                    return false;
+                }
+            }
+            QString colorStr = block.value("color").trimmed();
+            rule.mColor = Qt::white;
+            if (parseColor(colorStr, block.lineNumber, rule.mColor) == false) {
+                return false;
+            }
+            rules += rule;
+        } else if (block.name == QLatin1String("settings")) {
+            // Add settings here
+        } else {
+            mError = QString::fromLatin1("Line %1: Unknown block name '%2'").arg(block.lineNumber).arg(block.name);
+            return false;
+        }
+    }
+    return true;
+}
+
+bool MapToPNGFile::write(const QString &filePath, const MapToPNGFileSettings &settings, const QList<MapToPNGFileRule> &rules)
+{
+    SimpleFile simpleFile;
+
+    SimpleFileBlock settingsBlock;
+    settingsBlock.name = QLatin1String("settings");
+    // Add settings here
+    simpleFile.blocks += settingsBlock;
+
+    for (const MapToPNGFileRule &rule : rules) {
+        SimpleFileBlock block;
+        block.name = QLatin1String("rule");
+        block.addValue("name", rule.mRuleName);
+        block.addValue("tileset", QString::fromLatin1("%1 %2").arg(rule.mTilesetCompare).arg(rule.mTileset));
+        if (rule.mTileIndexMin >= 0 && rule.mTileIndexMax >= 0) {
+            block.addValue("tileRange", QString::fromLatin1("%1 %2").arg(rule.mTileIndexMin).arg(rule.mTileIndexMax));
+        }
+        block.addValue("color", colorString(rule.mColor));
+        simpleFile.blocks += block;
+    }
+
+    simpleFile.setVersion(VERSION_LATEST);
+    if (!simpleFile.write(filePath)) {
+        mError = simpleFile.errorString();
+        return false;
+    }
+    return true;
+}
+
+bool MapToPNGFile::parseColor(const QString &colorStr, int lineNumber, QColor &result)
+{
+    QStringList rgb = colorStr.split(QLatin1String(" "), Qt::SkipEmptyParts);
+    if (rgb.size() < 3 || rgb.size() > 4) {
+        mError = QString::fromLatin1("Line %1: Invalid color '%2'")
+                .arg(lineNumber)
+                .arg(colorStr);
+        return false;
+    }
+    bool ok = false;
+    int r = rgb[0].toInt(&ok);
+    if (ok == false || r < 0 || r > 255) {
+        mError = QString::fromLatin1("Line %1: Invalid color '%2'")
+                .arg(lineNumber)
+                .arg(colorStr);
+        return false;
+    }
+    int g = rgb[1].toInt(&ok);
+    if (ok == false || g < 0 || g > 255) {
+        mError = QString::fromLatin1("Line %1: Invalid color '%2'")
+                .arg(lineNumber)
+                .arg(colorStr);
+        return false;
+    }
+    int b = rgb[2].toInt(&ok);
+    if (ok == false || b < 0 || b > 255) {
+        mError = QString::fromLatin1("Line %1: Invalid color '%2'")
+                .arg(lineNumber)
+                .arg(colorStr);
+        return false;
+    }
+    int a = 255;
+    if (rgb.size() == 4) {
+        a = rgb[3].toInt(&ok);
+        if (ok == false || a < 0 || a > 255) {
+            mError = QString::fromLatin1("Line %1: Invalid color '%2'")
+                    .arg(lineNumber)
+                    .arg(colorStr);
+            return false;
+        }
+    }
+    result = QColor(r, g, b, a);
+    return true;
+}
+
+QString MapToPNGFile::colorString(const QColor &color)
+{
+    return QString::fromLatin1("%1 %2 %3 %4")
+            .arg(color.red())
+            .arg(color.green())
+            .arg(color.blue())
+            .arg(color.alpha());
 }

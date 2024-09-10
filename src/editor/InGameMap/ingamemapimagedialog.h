@@ -30,6 +30,34 @@ namespace Ui {
 class InGameMapImageDialog;
 }
 
+class MapToPNGFileSettings
+{
+public:
+};
+
+class MapToPNGFileRule
+{
+public:
+    QString mRuleName;
+    QString mTilesetCompare;
+    QString mTileset;
+    int mTileIndexMin;
+    int mTileIndexMax;
+    QColor mColor;
+};
+
+class MapToPNGFile
+{
+public:
+    bool read(const QString& filePath, MapToPNGFileSettings &settings, QList<MapToPNGFileRule> &rules);
+    bool write(const QString& filePath, const MapToPNGFileSettings &settings, const QList<MapToPNGFileRule> &rules);
+
+    bool parseColor(const QString &colorStr, int lineNumber, QColor &result);
+    QString colorString(const QColor &color);
+
+    QString mError;
+};
+
 class InGameMapImageDialog : public QDialog
 {
     Q_OBJECT
@@ -40,6 +68,7 @@ public:
 
 private slots:
     void chooseMapDirectory();
+    void chooseRulesFile();
     void chooseOutputFile();
     void clickedTheButton();
 
@@ -51,6 +80,7 @@ private:
     Ui::InGameMapImageDialog *ui;
     bool mRunning = false;
     bool mStop = false;
+    QList<MapToPNGFileRule> mRules;
 };
 
 #endif // INGAMEMAPIMAGEDIALOG_H
