@@ -15,7 +15,7 @@ rule
 {
 	name = JumboTree
 	tileset = contains jumbo
-	color = 38 53 22
+	color = 48 63 32
 }
 
 rule
@@ -77,7 +77,7 @@ rule
 	name = DirtAndGrass
 	tileset = equals blends_natural_01
 	tileRange = 80 95
-	color = 91 63 21
+	color = 81 53 11
 }
 
 rule
@@ -98,21 +98,21 @@ rule
 {
 	name = TilesAndStone
 	tileset = startsWith floors_exterior_tilesandstone
-	color = 132 81 76
+	color = 142 91 86
 }
 
 rule
 {
 	name = TilesAndWood
 	tileset = startsWith floors_exterior_tilesandwood
-	color = 132 81 76
+	color = 122 71 66
 }
 
 rule
 {
 	name = LocationAny
 	tileset = startsWith location_
-	color = 132 81 76
+	color = 112 61 56
 }
 
 rule

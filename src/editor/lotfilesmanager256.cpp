@@ -405,7 +405,9 @@ void LotFilesManager256::updateWorkers()
                     continue;
                 }
                 mDoneCells256.insert(doneCell);
-                generateCell(worker, cellJob.cell, cellJob.cell256X, cellJob.cell256Y);
+                if (generateCell(worker, cellJob.cell, cellJob.cell256X, cellJob.cell256Y) == false) {
+                    mFailures += GenerateCellFailure(cellJob.cell, mError);
+                }
             }
         }
         if (worker->mStatus == LotFilesWorker256::Status::LoadingMaps) {

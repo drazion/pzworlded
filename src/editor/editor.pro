@@ -354,6 +354,7 @@ configTxtFiles.path = $${CONFIG_PREFIX}
 configTxtFiles.files = \
     $${top_srcdir}/Blends.txt \
     $${top_srcdir}/MapBaseXML.txt \
+    $${top_srcdir}/MapToPNG.txt \
     $${top_srcdir}/Rules.txt \
     $${top_srcdir}/WorldDefaults.txt
 INSTALLS += configTxtFiles
