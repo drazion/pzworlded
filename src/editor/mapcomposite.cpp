@@ -1477,10 +1477,11 @@ QRectF MapComposite::boundingRect(MapRenderer *renderer, bool forceMapBounds) co
                 if (!layerGroup->bounds().isEmpty())
                     maxLevel = levelRecursive() + layerGroup->level();
             }
+        } else {
+            unionSceneRects(bounds,
+                            renderer->boundingRect(mapTileBounds, renderer->minLevel()),
+                            bounds);
         }
-        unionSceneRects(bounds,
-                        renderer->boundingRect(mapTileBounds, renderer->minLevel()),
-                        bounds);
         if (maxLevel > renderer->maxLevel())
             maxLevel = renderer->maxLevel();
         unionSceneRects(bounds,

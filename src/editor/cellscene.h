@@ -427,7 +427,7 @@ private:
 class DnDItem : public QGraphicsItem
 {
 public:
-    DnDItem(const QString &path, Tiled::MapRenderer *renderer, int level, QGraphicsItem *parent = 0);
+    DnDItem(MapInfo *mapInfo, Tiled::MapRenderer *renderer, int level, QGraphicsItem *parent = 0);
 
     QRectF boundingRect() const;
 
@@ -447,11 +447,12 @@ public:
     MapInfo *mapInfo();
 
 private:
+    MapInfo *mMapInfo;
     MapImage *mMapImage;
     Tiled::MapRenderer *mRenderer;
     QRectF mBoundingRect;
-    QPoint mPositionInMap;
-    QPoint mHotSpot;
+    QPoint mPositionInMap; // x,y square coordinate in the cell of the mouse pointer
+    QPoint mHotSpot; // x,y square offset relative to the top-left of MapInfo map
     int mLevel;
 };
 

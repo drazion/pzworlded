@@ -843,8 +843,7 @@ void SubMapTool::startMoving()
 
     foreach (SubMapItem *item, mMovingItems) {
         item->subMap()->setHiddenDuringDrag(true);
-        QString path = item->subMap()->mapInfo()->path();
-        DnDItem *dndItem = new DnDItem(path, mScene->renderer(), item->subMap()->levelOffset());
+        DnDItem *dndItem = new DnDItem(item->subMap()->mapInfo(), mScene->renderer(), item->subMap()->levelOffset());
         dndItem->setHotSpot(0, 0);
         mDnDItems.append(dndItem);
         dndItem->setZValue(10000);

@@ -377,7 +377,7 @@ public:
 
     void setAdjacentMap(int x, int y, MapInfo *mapInfo);
     MapComposite *adjacentMap(int x, int y);
-    bool isAdjacentMap()/* const*/
+    bool isAdjacentMap() const
     { return mIsAdjacentMap;/*mParent ? mParent->mAdjacentMaps.contains(this) : false;*/ }
 
     void setLotFilesManagerMap(bool b)

@@ -599,9 +599,9 @@ void BuildingMap::addEmptyOutsideObjects(Tiled::Map *map, Tiled::ObjectGroup *ob
                         bAdjacentToRoom = true;
                         break;
                     }
-                    if (bAdjacentToRoom)
-                        break;
                 }
+                if (bAdjacentToRoom)
+                    break;
             }
             if (bAdjacentToRoom == false)
                 continue;

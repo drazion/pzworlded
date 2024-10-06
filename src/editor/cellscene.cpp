@@ -4207,6 +4207,7 @@ void SubMapItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWid
         QLineF bottom(bounds.bottomLeft(), bounds.bottomRight());
 
         QPen dashPen(Qt::DashLine);
+        dashPen.setCosmetic(true);
         dashPen.setDashOffset(qMax(qreal(0), mBoundingRect.x()));
         painter->setPen(dashPen);
         painter->drawLines(QVector<QLineF>() << top << bottom);
@@ -4381,13 +4382,14 @@ void CellRoadItem::setDragOffset(const QPoint &offset)
 
 /////
 
-DnDItem::DnDItem(const QString &path, MapRenderer *renderer, int level, QGraphicsItem *parent)
+DnDItem::DnDItem(MapInfo *mapInfo, MapRenderer *renderer, int level, QGraphicsItem *parent)
     : QGraphicsItem(parent)
-    , mMapImage(MapImageManager::instance()->getMapImage(path))
+    , mMapInfo(mapInfo)
+    , mMapImage(MapImageManager::instance()->getMapImage(mapInfo->path()))
     , mRenderer(renderer)
     , mLevel(level)
 {
-    setHotSpot(mMapImage->mapInfo()->width() / 2, mMapImage->mapInfo()->height() / 2);
+    setHotSpot(mMapInfo->width() / 2, mMapInfo->height() / 2);
 }
 
 QRectF DnDItem::boundingRect() const
@@ -4397,17 +4399,22 @@ QRectF DnDItem::boundingRect() const
 
 void DnDItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWidget *)
 {
-    painter->setOpacity(0.5);
-    QRectF target = mBoundingRect;
-    QRectF source = QRect(QPoint(0, 0), mMapImage->image().size());
-    painter->drawImage(target, mMapImage->image(), source);
+    if (mMapImage) {
+        painter->setOpacity(0.5);
+        QRectF target = mBoundingRect;
+        QRectF source = QRect(QPoint(0, 0), mMapImage->image().size());
+        painter->drawImage(target, mMapImage->image(), source);
+    }
     painter->setOpacity(effectiveOpacity());
 
     QRect tileBounds(mPositionInMap.x() - mHotSpot.x(), mPositionInMap.y() - mHotSpot.y(),
-                     mMapImage->mapInfo()->width(), mMapImage->mapInfo()->height());
+                     mMapInfo->width(), mMapInfo->height());
     mRenderer->drawFancyRectangle(painter, tileBounds, Qt::darkGray, mLevel);
 
-#ifdef _DEBUG
+#if 2//def _DEBUG
+    QPen pen;
+    pen.setCosmetic(true);
+    painter->setPen(pen);
     painter->drawRect(mBoundingRect);
 #endif
 }
@@ -4421,12 +4428,15 @@ QPainterPath DnDItem::shape() const
 void DnDItem::setTilePosition(QPoint tilePos)
 {
     mPositionInMap = tilePos;
-
-    qreal tileScale = mRenderer->boundingRect(QRect(0,0,1,1)).width() / (qreal)mMapImage->tileSize().width();
-    QSize scaledImageSize(mMapImage->image().size() / mMapImage->scale() * tileScale);
-    QRectF bounds = QRectF(-mMapImage->tileToImageCoords(mHotSpot) / mMapImage->scale() * tileScale,
-                           scaledImageSize);
-    bounds.translate(mRenderer->tileToPixelCoords(mPositionInMap, mLevel));
+    QRectF bounds;
+    if (mMapImage) {
+        qreal tileScale = mRenderer->boundingRect(QRect(0,0,1,1)).width() / (qreal)mMapImage->tileSize().width();
+        QSize scaledImageSize(mMapImage->image().size() / mMapImage->scale() * tileScale);
+        bounds = QRectF(-mMapImage->tileToImageCoords(mHotSpot) / mMapImage->scale() * tileScale, scaledImageSize);
+        bounds.translate(mRenderer->tileToPixelCoords(mPositionInMap, mLevel));
+    } else {
+        bounds = mRenderer->boundingRect(mMapInfo->bounds().translated(mPositionInMap - mHotSpot), mLevel);
+    }
     if (bounds != mBoundingRect) {
         prepareGeometryChange();
         mBoundingRect = bounds;
@@ -4437,9 +4447,13 @@ void DnDItem::setHotSpot(const QPoint &pos)
 {
     // Position the item so that the top-left corner of the hotspot tile is at the item's origin
     mHotSpot = pos;
-    qreal tileScale = mRenderer->boundingRect(QRect(0,0,1,1)).width() / (qreal)mMapImage->tileSize().width();
-    QSize scaledImageSize(mMapImage->image().size() / mMapImage->scale() * tileScale);
-    mBoundingRect = QRectF(-mMapImage->tileToImageCoords(mHotSpot) / mMapImage->scale() * tileScale, scaledImageSize);
+    if (mMapImage) {
+        qreal tileScale = mRenderer->boundingRect(QRect(0,0,1,1)).width() / (qreal)mMapImage->tileSize().width();
+        QSize scaledImageSize(mMapImage->image().size() / mMapImage->scale() * tileScale);
+        mBoundingRect = QRectF(-mMapImage->tileToImageCoords(mHotSpot) / mMapImage->scale() * tileScale, scaledImageSize);
+    } else {
+        mBoundingRect = mRenderer->boundingRect(mMapInfo->bounds().translated(-mHotSpot), mLevel);
+    }
 }
 
 QPoint DnDItem::positionInMap() const
@@ -4454,7 +4468,7 @@ QPoint DnDItem::dropPosition() const
 
 MapInfo *DnDItem::mapInfo()
 {
-    return mMapImage->mapInfo();
+    return mMapInfo;
 }
 
 /////
@@ -6124,11 +6138,11 @@ void CellScene::dragEnterEvent(QGraphicsSceneDragDropEvent *event)
         if (!info.isFile()) continue;
         if (info.suffix() != QLatin1String("tmx") &&
                 info.suffix() != QLatin1String("tbx")) continue;
-        if (!MapManager::instance()->mapInfo(info.canonicalFilePath()))
+        MapInfo *mapInfo = MapManager::instance()->mapInfo(info.canonicalFilePath());
+        if (mapInfo == nullptr)
             continue;
 
-        QString path = info.canonicalFilePath();
-        mDnDItem = new DnDItem(path, mRenderer, level);
+        mDnDItem = new DnDItem(mapInfo, mRenderer, level);
         QPoint tilePos = mRenderer->pixelToTileCoords(event->scenePos(), level).toPoint();
         mDnDItem->setTilePosition(tilePos);
         addItem(mDnDItem);
