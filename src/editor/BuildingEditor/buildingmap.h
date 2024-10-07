@@ -120,6 +120,7 @@ class BuildingMapEmptyOutsideFill
 public:
     BuildingMapEmptyOutsideFill(Tiled::Map *map, BuildingFloor *floor);
     bool isEmptyOutsideSquare(int x, int y);
+    bool isRoomAtThisLevelOrBelow(int x, int y, int level);
     void floodFillScanlineStack(int x, int y);
     QVector<QRect> cleanupRegion();
     bool shouldVisit(int x1, int y1, int x2, int y2);
@@ -227,6 +228,9 @@ private:
 
     void userTilesToLayer(BuildingFloor *floor, const QString &layerName,
                           const QRect &bounds);
+
+    bool isAdjacentToRoom(BuildingFloor *floor, int x, int y);
+    bool isAdjacentToRoomThisLevelOrBelow(int x, int y, int level);
 
     inline void schedulePending()
     {

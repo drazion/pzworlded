@@ -470,7 +470,7 @@ bool BuildingMapEmptyOutsideFill::isEmptyOutsideSquare(int x, int y)
     if (mFloor->contains(x, y) == false) {
         return false;
     }
-    if (mFloor->GetRoomAt(x, y) != nullptr) {
+    if (isRoomAtThisLevelOrBelow(x, y, mFloor->level())) {
         return false;
     }
     MapLevel *mapLevel = mMap->mapLevelForZ(mFloor->level());
@@ -485,6 +485,19 @@ bool BuildingMapEmptyOutsideFill::isEmptyOutsideSquare(int x, int y)
         if (mFloorTiles.contains(cell.tile)) {
             return true;
         }
+    }
+    return false;
+}
+
+bool BuildingMapEmptyOutsideFill::isRoomAtThisLevelOrBelow(int x, int y, int level)
+{
+    Building *building = mFloor->building();
+    while (level >= 0) {
+        BuildingFloor *floor = building->floor(level);
+        if (floor->GetRoomAt(x, y) != nullptr) {
+            return true;
+        }
+        --level;
     }
     return false;
 }
@@ -589,21 +602,7 @@ void BuildingMap::addEmptyOutsideObjects(Tiled::Map *map, Tiled::ObjectGroup *ob
                 continue;
             }
             doneRgn += QRect(x, y, 1, 1);
-            if (floor->GetRoomAt(x, y) != nullptr) {
-                continue;
-            }
-            bool bAdjacentToRoom = false;
-            for (int dy = -1; dy <= 1; dy++) {
-                for (int dx = -1; dx <= 1; dx++) {
-                    if (floor->GetRoomAt(x + dx, y + dy) != nullptr) {
-                        bAdjacentToRoom = true;
-                        break;
-                    }
-                }
-                if (bAdjacentToRoom)
-                    break;
-            }
-            if (bAdjacentToRoom == false)
+            if (isAdjacentToRoomThisLevelOrBelow(x, y, floor->level()) == false)
                 continue;
             if (fill.isEmptyOutsideSquare(x, y) == false)
                 continue;
@@ -620,6 +619,30 @@ void BuildingMap::addEmptyOutsideObjects(Tiled::Map *map, Tiled::ObjectGroup *ob
             roomID++;
         }
     }
+}
+
+bool BuildingMap::isAdjacentToRoom(BuildingFloor *floor, int x, int y)
+{
+    for (int dy = -1; dy <= 1; dy++) {
+        for (int dx = -1; dx <= 1; dx++) {
+            if (floor->GetRoomAt(x + dx, y + dy) != nullptr) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+bool BuildingMap::isAdjacentToRoomThisLevelOrBelow(int x, int y, int level)
+{
+    while (level >= 0) {
+        BuildingFloor *floor = mBuilding->floor(level);
+        if (isAdjacentToRoom(floor, x, y)) {
+            return true;
+        }
+        --level;
+    }
+    return false;
 }
 
 int BuildingMap::defaultOrientation()
