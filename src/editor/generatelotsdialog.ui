@@ -130,11 +130,7 @@
       <item>
        <layout class="QHBoxLayout" name="horizontalLayout_6">
         <item>
-         <widget class="QLineEdit" name="tiledefEdit">
-          <property name="readOnly">
-           <bool>true</bool>
-          </property>
-         </widget>
+         <widget class="QComboBox" name="tiledefEdit"/>
         </item>
         <item>
          <widget class="QToolButton" name="tiledefBrowse">
@@ -157,9 +153,9 @@
       <item>
        <layout class="QHBoxLayout" name="horizontalLayout_2">
         <item>
-         <widget class="QLineEdit" name="spawnEdit">
-          <property name="readOnly">
-           <bool>true</bool>
+         <widget class="QComboBox" name="spawnEdit">
+          <property name="editable">
+           <bool>false</bool>
           </property>
          </widget>
         </item>
@@ -201,9 +197,9 @@
       <item>
        <layout class="QHBoxLayout" name="horizontalLayout">
         <item>
-         <widget class="QLineEdit" name="exportEdit">
-          <property name="readOnly">
-           <bool>true</bool>
+         <widget class="QComboBox" name="exportEdit">
+          <property name="editable">
+           <bool>false</bool>
           </property>
          </widget>
         </item>

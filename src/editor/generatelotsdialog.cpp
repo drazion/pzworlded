@@ -11,6 +11,11 @@
 #include <QImageReader>
 #include <QMessageBox>
 #include <QPushButton>
+#include <QSettings>
+
+static const QString KEY_EXPORT_DIRECTORIES = QStringLiteral("GenerateLotsDialog/ExportDirectories");
+static const QString KEY_SPAWNMAP_DIRECTORIES = QStringLiteral("GenerateLotsDialog/SpawnMapDirectories");
+static const QString KEY_TILEDEF_DIRECTORIES = QStringLiteral("GenerateLotsDialog/TileDefDirectories");
 
 GenerateLotsDialog::GenerateLotsDialog(WorldDocument *worldDoc, QWidget *parent) :
     QDialog(parent),
@@ -21,19 +26,41 @@ GenerateLotsDialog::GenerateLotsDialog(WorldDocument *worldDoc, QWidget *parent)
 
     const GenerateLotsSettings &settings = mWorldDoc->world()->getGenerateLotsSettings();
 
+    QSettings qSettings;
+    QStringList directories = qSettings.value(KEY_EXPORT_DIRECTORIES).toStringList();
+    ui->exportEdit->addItems(directories);
+
+    directories = qSettings.value(KEY_SPAWNMAP_DIRECTORIES).toStringList();
+    ui->spawnEdit->addItems(directories);
+
+    directories = qSettings.value(KEY_TILEDEF_DIRECTORIES).toStringList();
+    ui->tiledefEdit->addItems(directories);
+
     // Export directory
-    mExportDir = settings.exportDir;
-    ui->exportEdit->setText(QDir::toNativeSeparators(mExportDir));
+    mExportDir = QDir::toNativeSeparators(settings.exportDir);
+    if (mExportDir.isEmpty() == false) {
+        addComboItemIfAbsent(ui->exportEdit, mExportDir);
+        ui->exportEdit->setCurrentText(mExportDir);
+    }
+    connect(ui->exportEdit, &QComboBox::currentTextChanged, this, &GenerateLotsDialog::exportChanged);
     connect(ui->exportBrowse, &QAbstractButton::clicked, this, &GenerateLotsDialog::exportBrowse);
 
     // Zombie Spawn Map
-    mZombieSpawnMap = settings.zombieSpawnMap;
-    ui->spawnEdit->setText(QDir::toNativeSeparators(mZombieSpawnMap));
+    mZombieSpawnMap = QDir::toNativeSeparators(settings.zombieSpawnMap);
+    if (mZombieSpawnMap.isEmpty() == false) {
+        addComboItemIfAbsent(ui->spawnEdit, mZombieSpawnMap);
+        ui->spawnEdit->setCurrentText(mZombieSpawnMap);
+    }
+    connect(ui->spawnEdit, &QComboBox::currentTextChanged, this, &GenerateLotsDialog::spawnChanged);
     connect(ui->spawnBrowse, &QAbstractButton::clicked, this, &GenerateLotsDialog::spawnBrowse);
 
     // TileDef folder
-    mTileDefFolder = settings.tileDefFolder;
-    ui->tiledefEdit->setText(QDir::toNativeSeparators(mTileDefFolder));
+    mTileDefFolder = QDir::toNativeSeparators(settings.tileDefFolder);
+    if (mTileDefFolder.isEmpty() == false) {
+        addComboItemIfAbsent(ui->tiledefEdit, mTileDefFolder);
+        ui->tiledefEdit->setCurrentText(mTileDefFolder);
+    }
+    connect(ui->tiledefEdit, &QComboBox::currentTextChanged, this, &GenerateLotsDialog::tileDefChanged);
     connect(ui->tiledefBrowse, &QAbstractButton::clicked, this, &GenerateLotsDialog::tileDefBrowse);
 
     // World origin
@@ -57,11 +84,27 @@ GenerateLotsDialog::~GenerateLotsDialog()
 void GenerateLotsDialog::exportBrowse()
 {
     QString f = QFileDialog::getExistingDirectory(this, tr("Choose the .lot Folder"),
-        ui->exportEdit->text());
+        ui->exportEdit->currentText());
     if (!f.isEmpty()) {
-        mExportDir = f;
-        ui->exportEdit->setText(QDir::toNativeSeparators(mExportDir));
+        mExportDir = QDir::toNativeSeparators(f);
+        addComboItemIfAbsent(ui->exportEdit, mExportDir);
+        ui->exportEdit->setCurrentText(mExportDir);
     }
+}
+
+void GenerateLotsDialog::exportChanged(const QString &text)
+{
+    mExportDir = text;
+}
+
+void GenerateLotsDialog::spawnChanged(const QString &text)
+{
+    mZombieSpawnMap = text;
+}
+
+void GenerateLotsDialog::tileDefChanged(const QString &text)
+{
+    mTileDefFolder = text;
 }
 
 void GenerateLotsDialog::spawnBrowse()
@@ -80,18 +123,20 @@ void GenerateLotsDialog::spawnBrowse()
     QString f = QFileDialog::getOpenFileName(this, tr("Choose the Zombie Spawn Map image"),
         initialDir, formatString);
     if (!f.isEmpty()) {
-        mZombieSpawnMap = f;
-        ui->spawnEdit->setText(QDir::toNativeSeparators(mZombieSpawnMap));
+        mZombieSpawnMap = QDir::toNativeSeparators(f);
+        addComboItemIfAbsent(ui->spawnEdit, mZombieSpawnMap);
+        ui->spawnEdit->setCurrentText(mZombieSpawnMap);
     }
 }
 
 void GenerateLotsDialog::tileDefBrowse()
 {
     QString f = QFileDialog::getExistingDirectory(this, tr("Choose the .tiles Folder"),
-        ui->tiledefEdit->text());
+        ui->tiledefEdit->currentText());
     if (!f.isEmpty()) {
-        mTileDefFolder = f;
-        ui->tiledefEdit->setText(QDir::toNativeSeparators(mTileDefFolder));
+        mTileDefFolder = QDir::toNativeSeparators(f);
+        addComboItemIfAbsent(ui->tiledefEdit, mTileDefFolder);
+        ui->tiledefEdit->setCurrentText(mTileDefFolder);
     }
 }
 
@@ -108,6 +153,11 @@ void GenerateLotsDialog::accept()
     settings.numberOfThreads = ui->numThreadsSlider->value();
     if (settings != mWorldDoc->world()->getGenerateLotsSettings())
         mWorldDoc->changeGenerateLotsSettings(settings);
+
+    QSettings qSettings;
+    qSettings.setValue(KEY_EXPORT_DIRECTORIES, comboboxStringList(ui->exportEdit));
+    qSettings.setValue(KEY_SPAWNMAP_DIRECTORIES, comboboxStringList(ui->spawnEdit));
+    qSettings.setValue(KEY_TILEDEF_DIRECTORIES, comboboxStringList(ui->tiledefEdit));
 
     QDialog::accept();
 }
@@ -126,7 +176,29 @@ void GenerateLotsDialog::apply()
     if (settings != mWorldDoc->world()->getGenerateLotsSettings())
         mWorldDoc->changeGenerateLotsSettings(settings);
 
+    QSettings qSettings;
+    qSettings.setValue(KEY_EXPORT_DIRECTORIES, comboboxStringList(ui->exportEdit));
+    qSettings.setValue(KEY_SPAWNMAP_DIRECTORIES, comboboxStringList(ui->spawnEdit));
+    qSettings.setValue(KEY_TILEDEF_DIRECTORIES, comboboxStringList(ui->tiledefEdit));
+
     QDialog::reject();
+}
+
+void GenerateLotsDialog::addComboItemIfAbsent(QComboBox *comboBox, const QString &text)
+{
+    int index = comboBox->findText(text);
+    if (index == -1) {
+        comboBox->insertItem(0, text);
+    }
+}
+
+QStringList GenerateLotsDialog::comboboxStringList(QComboBox *comboBox) const
+{
+    QStringList items;
+    for (int i = 0; i < comboBox->count(); i++) {
+        items << comboBox->itemText(i);
+    }
+    return items;
 }
 
 bool GenerateLotsDialog::validate()
