@@ -159,6 +159,7 @@ MainWindow::MainWindow(QWidget *parent)
     ui->actionCopy->setShortcuts(QKeySequence::Copy);
     ui->actionPaste->setShortcuts(QKeySequence::Paste);
 
+    ui->actionShowCellBorder->setChecked(prefs->showCellBorder());
     ui->actionSnapToGrid->setChecked(prefs->snapToGrid());
     ui->actionShowCoordinates->setChecked(prefs->showCoordinates());
     ui->actionShowGrid->setChecked(prefs->showWorldGrid());
@@ -325,6 +326,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->actionCreateWorldImage, &QAction::triggered, this, &MainWindow::createInGameMapImage);
     connect(ui->actionCreateImagePyramid, &QAction::triggered, this, &MainWindow::creaeInGameMapImagePyramid);
 
+    connect(ui->actionShowCellBorder, &QAction::toggled, prefs, &Preferences::setShowCellBorder);
     connect(ui->actionSnapToGrid, &QAction::toggled, prefs, &Preferences::setSnapToGrid);
     connect(ui->actionShowCoordinates, &QAction::toggled, prefs, &Preferences::setShowCoordinates);
     connect(ui->actionShowGrid, &QAction::toggled, this, &MainWindow::setShowGrid);

@@ -44,6 +44,7 @@ public:
     QString luaPath(const QString &fileName) const;
 
     bool snapToGrid() const;
+    bool showCellBorder() const;
     bool showCoordinates() const;
     bool showWorldGrid() const;
     bool showCellGrid() const;
@@ -97,6 +98,7 @@ public:
 
 signals:
     void snapToGridChanged(bool snapToGrid);
+    void showCellBorderChanged(bool showGrid);
     void showCoordinatesChanged(bool showGrid);
     void showWorldGridChanged(bool showGrid);
     void showCellGridChanged(bool showGrid);
@@ -127,6 +129,7 @@ signals:
 
 public slots:
     void setSnapToGrid(bool snapToGrid);
+    void setShowCellBorder(bool showCellBorder);
     void setShowCoordinates(bool showCoords);
     void setShowWorldGrid(bool showGrid);
     void setShowCellGrid(bool showGrid);
@@ -151,6 +154,7 @@ private:
     QSettings *mSettings;
 
     bool mSnapToGrid;
+    bool mShowCellBorder;
     bool mShowCoordinates;
     bool mShowWorldGrid;
     bool mShowCellGrid;

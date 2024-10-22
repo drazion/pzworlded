@@ -41,6 +41,11 @@ bool Preferences::snapToGrid() const
     return mSnapToGrid;
 }
 
+bool Preferences::showCellBorder() const
+{
+    return mShowCellBorder;
+}
+
 bool Preferences::showCoordinates() const
 {
     return mShowCoordinates;
@@ -78,6 +83,7 @@ Preferences::Preferences()
     // Retrieve interface settings
     mSettings->beginGroup(QLatin1String("Interface"));
     mSnapToGrid = mSettings->value(QLatin1String("SnapToGrid"), true).toBool();
+    mShowCellBorder = mSettings->value(QLatin1String("ShowCellBorder"), true).toBool();
     mShowCoordinates = mSettings->value(QLatin1String("ShowCoordinates"), true).toBool();
     mShowWorldGrid = mSettings->value(QLatin1String("ShowWorldGrid"), true).toBool();
     mShowCellGrid = mSettings->value(QLatin1String("ShowCellGrid"), false).toBool();
@@ -225,6 +231,16 @@ void Preferences::setSnapToGrid(bool snapToGrid)
     mSnapToGrid = snapToGrid;
     mSettings->setValue(QLatin1String("Interface/SnapToGrid"), mSnapToGrid);
     emit snapToGridChanged(mSnapToGrid);
+}
+
+void Preferences::setShowCellBorder(bool showCellBorder)
+{
+    if (showCellBorder == mShowCellBorder)
+        return;
+
+    mShowCellBorder = showCellBorder;
+    mSettings->setValue(QLatin1String("Interface/ShowCellBorder"), mShowCellBorder);
+    emit showCellBorderChanged(mShowCellBorder);
 }
 
 void Preferences::setShowCoordinates(bool showCoords)

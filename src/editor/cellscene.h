@@ -906,6 +906,7 @@ public slots:
     void objectGroupReordered(int index);
 
     void currentLevelChanged(int index);
+    void showCellBorderChanged(bool visible);
     void setGridVisible(bool visible);
     void gridColorChanged(const QColor &gridColor);
     void showObjectsChanged(bool show);

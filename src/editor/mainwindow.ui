@@ -303,6 +303,7 @@
     <property name="title">
      <string>View</string>
     </property>
+    <addaction name="actionShowCellBorder"/>
     <addaction name="actionShowCoordinates"/>
     <addaction name="actionShowGrid"/>
     <addaction name="actionShowInvisibleTiles"/>
@@ -1035,6 +1036,14 @@
    </property>
    <property name="text">
     <string>Show Invisible Tiles</string>
+   </property>
+  </action>
+  <action name="actionShowCellBorder">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Show Cell Border</string>
    </property>
   </action>
  </widget>

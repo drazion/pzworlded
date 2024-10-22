@@ -4536,6 +4536,7 @@ CellScene::CellScene(QObject *parent)
 
     // These signals are handled even when the document isn't current
     Preferences *prefs = Preferences::instance();
+    connect(prefs, &Preferences::showCellBorderChanged, this, &CellScene::showCellBorderChanged);
     connect(prefs, &Preferences::showCellGridChanged, this, &CellScene::setGridVisible);
     connect(prefs, &Preferences::highlightCurrentLevelChanged, this, &CellScene::setHighlightCurrentLevel);
     setGridVisible(prefs->showCellGrid());
@@ -5190,6 +5191,7 @@ void CellScene::updateBordersItem()
     polygon << QPointF(mRenderer->tileToPixelCoords(rect.bottomRight()));
     polygon << QPointF(mRenderer->tileToPixelCoords(rect.bottomLeft()));
     mMapBordersItem->setPolygon(polygon);
+    mMapBordersItem->setVisible(Preferences::instance()->showCellBorder());
 }
 
 void CellScene::cellAdded(WorldCell *_cell)
@@ -5650,6 +5652,11 @@ void CellScene::currentLevelChanged(int index)
     Q_UNUSED(index)
     updateCurrentLevelHighlight();
     mGridItem->updateBoundingRect();
+}
+
+void CellScene::showCellBorderChanged(bool visible)
+{
+    mMapBordersItem->setVisible(visible);
 }
 
 void CellScene::selectedLotsChanged()
