@@ -1060,14 +1060,18 @@ bool LotFilesWorker256::generateHeaderAux(int cell256X, int cell256Y)
 #if 1
             QRect chunkRect(p1.x() + x * CHUNK_SIZE_256, p1.y() + y * CHUNK_SIZE_256, CHUNK_SIZE_256, CHUNK_SIZE_256);
             chunkRect &= validSquares;
+            if (chunkRect.isEmpty()) {
+                out << quint8(0);
+                continue;
+            }
             int chunkIntensity = 0;
             for (int y3 = chunkRect.top(); y3 <= chunkRect.bottom(); y3++) {
                 for (int x3 = chunkRect.left(); x3 <= chunkRect.right(); x3++) {
                     chunkIntensity += ZombieIntensity[x3 - combinedMapBounds.left()][y3 - combinedMapBounds.top()];
                 }
             }
-            float alpha = chunkIntensity / float(CHUNK_SIZE_256 * CHUNK_SIZE_256 * 255);
-            out << qint8(alpha * 255);
+            float alpha = chunkIntensity / float(chunkRect.width() * chunkRect.height() * 255);
+            out << quint8(alpha * 255);
 #else
             qint8 density = calculateZombieDensity(x1 + x * CHUNK_SIZE_256, y1 + y * CHUNK_SIZE_256);
             out << density;
