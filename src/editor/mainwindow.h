@@ -109,6 +109,9 @@ public slots:
     void generateLotsSelected8x8();
     void generateLotSettingsChanged();
 
+    void overwriteSpawnMap_AllCells_256();
+    void overwriteSpawnMap_SelectedCells_256();
+
     void BMPToTMXAll();
     void BMPToTMXSelected();
 

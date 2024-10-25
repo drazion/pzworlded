@@ -1100,8 +1100,8 @@ void IsoMetaGrid::Create(const QString &directory)
 
             }
 
-            for (int x = 0; x < 30; ++x) {
-                for (int y = 0; y < 30; ++y) {
+            for (int x = 0; x < CHUNKS_PER_CELL; ++x) {
+                for (int y = 0; y < CHUNKS_PER_CELL; ++y) {
                     int zombieDensity = IsoLot::readByte(in);
                     Q_UNUSED(zombieDensity)
 //                    ch.getChunk(x, y).setZombieIntensity(zombieDensity);

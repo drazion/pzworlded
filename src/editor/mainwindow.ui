@@ -265,6 +265,13 @@
      <addaction name="actionGenerateLotsAll8x8"/>
      <addaction name="actionGenerateLotsSelected8x8"/>
     </widget>
+    <widget class="QMenu" name="menuOverwriteSpawnMap256">
+     <property name="title">
+      <string>Overwrite SpawnMap 8x8</string>
+     </property>
+     <addaction name="actionOverwriteSpawnMap_AllCells_256"/>
+     <addaction name="actionOverwriteSpawnMap_SelectedCells_256"/>
+    </widget>
     <addaction name="actionNew"/>
     <addaction name="actionOpen"/>
     <addaction name="actionSave"/>
@@ -274,6 +281,7 @@
     <addaction name="menuTMX_To_BMP"/>
     <addaction name="menuGenerate_Lots"/>
     <addaction name="menuGenerate_Lots_8x8"/>
+    <addaction name="menuOverwriteSpawnMap256"/>
     <addaction name="actionLUAObjectDump"/>
     <addaction name="actionWriteObjects"/>
     <addaction name="actionWriteRoomTonesToLua"/>
@@ -1044,6 +1052,22 @@
    </property>
    <property name="text">
     <string>Show Cell Border</string>
+   </property>
+  </action>
+  <action name="actionOverwriteSpawnMap_AllCells_256">
+   <property name="text">
+    <string>All Cells...</string>
+   </property>
+   <property name="toolTip">
+    <string>All Cells</string>
+   </property>
+  </action>
+  <action name="actionOverwriteSpawnMap_SelectedCells_256">
+   <property name="text">
+    <string>Selected Cells...</string>
+   </property>
+   <property name="toolTip">
+    <string>Selected Cells</string>
    </property>
   </action>
  </widget>

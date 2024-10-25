@@ -573,6 +573,290 @@ bool LotFilesManager256::generateCell(LotFilesWorker256 *worker, WorldCell *cell
     return true;
 }
 
+bool LotFilesManager256::overwriteSpawnMap(WorldDocument *worldDoc, GenerateMode mode)
+{
+    mWorldDoc = worldDoc;
+    World *world = worldDoc->world();
+    const GenerateLotsSettings &lotSettings = world->getGenerateLotsSettings();
+    mCellBounds256 = CombinedCellMaps::toCellRect256(QRect(lotSettings.worldOrigin, QSize(world->size())));
+
+    QScopedPointer<ExportLotsProgressDialog> scoped(new ExportLotsProgressDialog(MainWindow::instance()));
+    mDialog = scoped.get();
+    ExportLotsProgressDialog& progress = *mDialog;
+    progress.setModal(true);
+    mProgressDialog = &progress;
+    mProgressDialog->setWindowTitle(QLatin1String("Overwrite SpawnMap"));
+//    connect(mProgressDialog, &ExportLotsProgressDialog::cancelled, this, &LotFilesManager256::cancel);
+    progress.show();
+    progress.activateWindow();
+    progress.raise();
+    qApp->processEvents(QEventLoop::ProcessEventsFlag::AllEvents);
+    progress.setWorldSize(mCellBounds256.width(), mCellBounds256.height());
+    progress.setPrompt(QLatin1String("Reading Zombie Spawn Map"));
+
+    QString spawnMap = lotSettings.zombieSpawnMap;
+    if (!QFileInfo(spawnMap).exists()) {
+        mError = tr("Couldn't find the Zombie Spawn Map image.\n%1")
+                .arg(spawnMap);
+        return false;
+    }
+    ZombieSpawnMap = QImage(spawnMap);
+    if (ZombieSpawnMap.isNull()) {
+        mError = tr("Couldn't read the Zombie Spawn Map image.\n%1")
+                .arg(spawnMap);
+        mDialog = nullptr;
+        return false;
+    }
+
+    progress.setPrompt(QLatin1String("Running..."));
+
+    // A single 300x300 cell may overlap 4, 6, or 9 256x256 cells.
+    mDoneCells256.clear();
+
+    if (mode == GenerateMode::GenerateAll) {
+        for (int y = 0; y < world->height(); y++) {
+            for (int x = 0; x < world->width(); x++) {
+                int cell300X = lotSettings.worldOrigin.x() + x;
+                int cell300Y = lotSettings.worldOrigin.y() + y;
+                QRect cellBounds256 = CombinedCellMaps::toCellRect256(QRect(cell300X, cell300Y, 1, 1));
+                for (int cell256Y = cellBounds256.top(); cell256Y <= cellBounds256.bottom(); cell256Y++) {
+                    for (int cell256X = cellBounds256.left(); cell256X <= cellBounds256.right(); cell256X++) {
+                        mProgressDialog->setCellStatus(cell256X - mCellBounds256.left(), cell256Y - mCellBounds256.top(), ExportLotsProgressDialog::CellStatus::Pending);
+                    }
+                }
+            }
+        }
+        for (int y = 0; y < world->height(); y++) {
+            for (int x = 0; x < world->width(); x++) {
+                int cell300X = lotSettings.worldOrigin.x() + x;
+                int cell300Y = lotSettings.worldOrigin.y() + y;
+                if (overwriteSpawnMap300(cell300X, cell300Y) == false) {
+                    mDialog = nullptr;
+                    return false;
+                }
+                qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
+            }
+        }
+    }
+    if (mode == GenerateMode::GenerateSelected) {
+        for (WorldCell *cell : worldDoc->selectedCells()) {
+            int cell300X = lotSettings.worldOrigin.x() + cell->x();
+            int cell300Y = lotSettings.worldOrigin.y() + cell->y();
+            QRect cellBounds256 = CombinedCellMaps::toCellRect256(QRect(cell300X, cell300Y, 1, 1));
+            for (int cell256Y = cellBounds256.top(); cell256Y <= cellBounds256.bottom(); cell256Y++) {
+                for (int cell256X = cellBounds256.left(); cell256X <= cellBounds256.right(); cell256X++) {
+                    mProgressDialog->setCellStatus(cell256X - mCellBounds256.left(), cell256Y - mCellBounds256.top(), ExportLotsProgressDialog::CellStatus::Pending);
+                }
+            }
+        }
+        for (WorldCell *cell : worldDoc->selectedCells()) {
+            int cell300X = lotSettings.worldOrigin.x() + cell->x();
+            int cell300Y = lotSettings.worldOrigin.y() + cell->y();
+            if (overwriteSpawnMap300(cell300X, cell300Y) == false) {
+                mDialog = nullptr;
+                return false;
+            }
+            qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
+        }
+    }
+
+    mDialog = nullptr;
+
+    return true;
+}
+
+bool LotFilesManager256::overwriteSpawnMap300(int cell300X, int cell300Y)
+{
+    QRect cellBounds256 = CombinedCellMaps::toCellRect256(QRect(cell300X, cell300Y, 1, 1));
+    for (int cell256Y = cellBounds256.top(); cell256Y <= cellBounds256.bottom(); cell256Y++) {
+        for (int cell256X = cellBounds256.left(); cell256X <= cellBounds256.right(); cell256X++) {
+            if (mDoneCells256.contains({cell256X, cell256Y}))
+                continue;
+            mDoneCells256.insert({cell256X, cell256Y});
+            if (overwriteSpawnMap256(cell256X, cell256Y) == false) {
+                mProgressDialog->setCellStatus(cell256X - mCellBounds256.left(), cell256Y - mCellBounds256.top(), ExportLotsProgressDialog::CellStatus::Failed);
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+#undef CHUNKS_PER_CELL // Conflicts with IsoConstants.CHUNKS_PER_CELL
+#include "chunkmap.h"
+#include <QBuffer>
+
+bool LotFilesManager256::overwriteSpawnMap256(int cell256X, int cell256Y)
+{
+    QString exportDir = mWorldDoc->world()->getGenerateLotsSettings().exportDir;
+    QString filenameheader = QString::fromLatin1("%1/%2_%3.lotheader").arg(exportDir).arg(cell256X).arg(cell256Y);
+
+    QFile fo(filenameheader);
+    if (!fo.exists()) {
+        mProgressDialog->setCellStatus(cell256X - mCellBounds256.left(), cell256Y - mCellBounds256.top(), ExportLotsProgressDialog::CellStatus::Missing);
+        return true;
+    }
+    if (!fo.open(QFile::ReadOnly)) {
+        mError = fo.errorString();
+        return false;
+    }
+
+    QBuffer buffer;
+    buffer.open(QBuffer::ReadWrite);
+    buffer.write(fo.readAll());
+    fo.close();
+    buffer.seek(0);
+
+    QDataStream in(&buffer);
+    in.setByteOrder(QDataStream::LittleEndian);
+
+    char magic[4] = { 0 };
+    in.readRawData(magic, 4);
+    if (magic[0] == 'L' && magic[1] == 'O' && magic[2] == 'T' && magic[3] == 'H') {
+        // Version 1
+    } else {
+        // Version 0
+        buffer.seek(0);
+    }
+
+    int version = IsoLot::readInt(in);
+    if (version < IsoLot::VERSION0 || version > IsoLot::VERSION_LATEST) {
+        mError = tr("Unsupported .lotheader version");
+        return false;
+    }
+    int tilecount = IsoLot::readInt(in);
+
+    for (int n = 0; n < tilecount; ++n) {
+        QString str = IsoLot::readString(in);
+    }
+
+    if (version == LotHeader::VERSION0) {
+        quint8 alwaysZero = IsoLot::readByte(in);
+        Q_UNUSED(alwaysZero);
+    }
+
+    IsoConstants isoConstants(true);
+
+    int squaresPerChunkX = IsoLot::readInt(in);
+    int squaresPerChunkY = IsoLot::readInt(in);
+    if ((squaresPerChunkX != isoConstants.SQUARES_PER_CHUNK) || (squaresPerChunkY != isoConstants.SQUARES_PER_CHUNK)) {
+        mError = tr("Unsupported .lotheader squares-per-chunk");
+        return false;
+    }
+
+    int minLevel, maxLevel;
+    if (version == LotHeader::VERSION0) {
+        minLevel = 0;
+        maxLevel = IsoLot::readInt(in) - 1; // Was always 15 but only data for levels 0-14
+        Q_ASSERT(maxLevel == 14);
+    } else {
+        minLevel = IsoLot::readInt(in);
+        maxLevel = IsoLot::readInt(in);
+    }
+    Q_UNUSED(minLevel)
+
+    int numRooms = IsoLot::readInt(in);
+
+    for (int n = 0; n < numRooms; ++n) {
+        QString roomName = IsoLot::readString(in);
+        int level = IsoLot::readInt(in);
+        Q_UNUSED(level)
+        int rects = IsoLot::readInt(in);
+        for (int rc = 0; rc < rects; ++rc) {
+            int x = IsoLot::readInt(in);
+            int y = IsoLot::readInt(in);
+            int w = IsoLot::readInt(in);
+            int h = IsoLot::readInt(in);
+            Q_UNUSED(x) Q_UNUSED(y) Q_UNUSED(w) Q_UNUSED(h)
+        }
+        int nObjects = IsoLot::readInt(in);
+        for (int m = 0; m < nObjects; ++m) {
+            int e = IsoLot::readInt(in);
+            int x = IsoLot::readInt(in);
+            int y = IsoLot::readInt(in);
+            Q_UNUSED(e) Q_UNUSED(x) Q_UNUSED(y)
+        }
+    }
+
+    int numBuildings = IsoLot::readInt(in);
+
+    for (int n = 0; n < numBuildings; ++n) {
+        int numbRooms = IsoLot::readInt(in);
+        for (int x = 0; x < numbRooms; ++x) {
+            int roomIndex = IsoLot::readInt(in);
+            Q_UNUSED(roomIndex)
+        }
+    }
+
+    writeZombieIntensity(in, cell256X, cell256Y);
+
+    if (!fo.open(QFile::WriteOnly)) {
+        mError = fo.errorString();
+        return false;
+    }
+    qint64 length = buffer.pos();
+    fo.write(buffer.buffer().constData(), length);
+    fo.close();
+
+    mProgressDialog->setCellStatus(cell256X - mCellBounds256.left(), cell256Y - mCellBounds256.top(), ExportLotsProgressDialog::CellStatus::Exported);
+
+    return true;
+}
+
+#define CHUNKS_PER_CELL 30 // lotfilesmanager.h
+
+void LotFilesManager256::writeZombieIntensity(QDataStream &out, int cell256X, int cell256Y)
+{
+    const GenerateLotsSettings &lotSettings = mWorldDoc->world()->getGenerateLotsSettings();
+
+    QRect cellBounds300 = CombinedCellMaps::toCellRect300(QRect(cell256X, cell256Y, 1, 1));
+
+    // Set the zombie intensity on each square using the spawn image.
+    const int MAX_300x300_CELLS = 3;
+    quint8 ZombieIntensity[MAX_300x300_CELLS * CELL_WIDTH][MAX_300x300_CELLS * CELL_HEIGHT];
+    const QImage& ZombieSpawnMap = this->ZombieSpawnMap;
+    QRect zombieSpawnMapBounds(lotSettings.worldOrigin.x() * CHUNKS_PER_CELL, lotSettings.worldOrigin.y() * CHUNKS_PER_CELL, ZombieSpawnMap.width(), ZombieSpawnMap.height());
+    QRect combinedMapBounds(cellBounds300.x() * CHUNKS_PER_CELL, cellBounds300.y() * CHUNKS_PER_CELL, cellBounds300.width() * CHUNKS_PER_CELL, cellBounds300.height() * CHUNKS_PER_CELL);
+    QRect bounds = zombieSpawnMapBounds & combinedMapBounds;
+    for (int chunkY = bounds.top(); chunkY <= bounds.bottom(); chunkY++) {
+        for (int chunkX = bounds.left(); chunkX <= bounds.right(); chunkX++) {
+            QRgb pixel = ZombieSpawnMap.pixel(chunkX - zombieSpawnMapBounds.left(), chunkY - zombieSpawnMapBounds.top());
+            quint8 chunkIntensity = qRed(pixel);
+            for (int squareY = 0; squareY < CHUNK_HEIGHT; squareY++) {
+                for (int squareX = 0; squareX < CHUNK_WIDTH; squareX++) {
+                    int gx = (chunkX - combinedMapBounds.left()) * CHUNK_WIDTH + squareX;
+                    int gy = (chunkY - combinedMapBounds.top()) * CHUNK_HEIGHT + squareY;
+                    ZombieIntensity[gx][gy] = chunkIntensity;
+                }
+            }
+        }
+    }
+
+    zombieSpawnMapBounds = QRect(lotSettings.worldOrigin.x() * CELL_WIDTH, lotSettings.worldOrigin.y() * CELL_HEIGHT, ZombieSpawnMap.width() * CHUNK_WIDTH, ZombieSpawnMap.height() * CHUNK_HEIGHT);
+    combinedMapBounds = QRect(cellBounds300.x() * CELL_WIDTH, cellBounds300.y() * CELL_HEIGHT, cellBounds300.width() * CELL_WIDTH, cellBounds300.height() * CELL_HEIGHT);
+    QRect combinedMapBounds256(cell256X * CELL_SIZE_256, cell256Y * CELL_SIZE_256, CELL_SIZE_256, CELL_SIZE_256);
+    QRect validSquares = zombieSpawnMapBounds & combinedMapBounds256;
+    QPoint p1 = combinedMapBounds256.topLeft();
+    for (int x = 0; x < CHUNKS_PER_CELL_256; x++) {
+        for (int y = 0; y < CHUNKS_PER_CELL_256; y++) {
+            QRect chunkRect(p1.x() + x * CHUNK_SIZE_256, p1.y() + y * CHUNK_SIZE_256, CHUNK_SIZE_256, CHUNK_SIZE_256);
+            chunkRect &= validSquares;
+            if (chunkRect.isEmpty()) {
+                out << quint8(0);
+                continue;
+            }
+            int chunkIntensity = 0;
+            for (int y3 = chunkRect.top(); y3 <= chunkRect.bottom(); y3++) {
+                for (int x3 = chunkRect.left(); x3 <= chunkRect.right(); x3++) {
+                    chunkIntensity += ZombieIntensity[x3 - combinedMapBounds.left()][y3 - combinedMapBounds.top()];
+                }
+            }
+            float alpha = chunkIntensity / float(chunkRect.width() * chunkRect.height() * 255);
+            out << quint8(alpha * 255);
+        }
+    }
+}
+
 void LotFilesManager256::workTimerTimeout()
 {
     updateWorkers();
@@ -1057,7 +1341,6 @@ bool LotFilesWorker256::generateHeaderAux(int cell256X, int cell256Y)
     QPoint p1 = combinedMapBounds256.topLeft();
     for (int x = 0; x < CHUNKS_PER_CELL_256; x++) {
         for (int y = 0; y < CHUNKS_PER_CELL_256; y++) {
-#if 1
             QRect chunkRect(p1.x() + x * CHUNK_SIZE_256, p1.y() + y * CHUNK_SIZE_256, CHUNK_SIZE_256, CHUNK_SIZE_256);
             chunkRect &= validSquares;
             if (chunkRect.isEmpty()) {
@@ -1072,10 +1355,6 @@ bool LotFilesWorker256::generateHeaderAux(int cell256X, int cell256Y)
             }
             float alpha = chunkIntensity / float(chunkRect.width() * chunkRect.height() * 255);
             out << quint8(alpha * 255);
-#else
-            qint8 density = calculateZombieDensity(x1 + x * CHUNK_SIZE_256, y1 + y * CHUNK_SIZE_256);
-            out << density;
-#endif
         }
     }
 

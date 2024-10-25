@@ -151,6 +151,11 @@ public:
     bool generateCell(WorldCell* cell);
     bool generateCell(LotFilesWorker256 *worker, WorldCell *cell, int cell256X, int cell256Y);
 
+    bool overwriteSpawnMap(WorldDocument *worldDoc, GenerateMode mode);
+    bool overwriteSpawnMap300(int cell300X, int cell300Y);
+    bool overwriteSpawnMap256(int cell256X, int cell256Y);
+    void writeZombieIntensity(QDataStream &out, int cell256X, int cell256Y);
+
     QString errorString() const { return mError; }
 
 signals:

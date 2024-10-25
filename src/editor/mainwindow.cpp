@@ -263,6 +263,8 @@ MainWindow::MainWindow(QWidget *parent)
             this, &MainWindow::generateLotsAll8x8);
     connect(ui->actionGenerateLotsSelected8x8, &QAction::triggered,
             this, &MainWindow::generateLotsSelected8x8);
+    connect(ui->actionOverwriteSpawnMap_AllCells_256, &QAction::triggered, this, &MainWindow::overwriteSpawnMap_AllCells_256);
+    connect(ui->actionOverwriteSpawnMap_SelectedCells_256, &QAction::triggered, this, &MainWindow::overwriteSpawnMap_SelectedCells_256);
     connect(ui->actionBMPToTMXAll, &QAction::triggered,
             this, &MainWindow::BMPToTMXAll);
     connect(ui->actionBMPToTMXSelected, &QAction::triggered,
@@ -1563,6 +1565,32 @@ void MainWindow::generateLotSettingsChanged()
     updateActions();
 }
 
+static void overwriteSpawnMap256(MainWindow *mainWin, Document *doc, LotFilesManager256::GenerateMode mode)
+{
+    if (!doc)
+        return;
+    WorldDocument *worldDoc = doc->asWorldDocument();
+    if (!worldDoc)
+        return;
+    GenerateLotsDialog dialog(worldDoc, mainWin);
+    dialog.setWindowTitle(QLatin1String("Overwrite SpawnMap"));
+    if (dialog.exec() != QDialog::Accepted)
+        return;
+    if (LotFilesManager256::instance()->overwriteSpawnMap(worldDoc, mode) == false) {
+        QMessageBox::warning(mainWin, mainWin->tr("Overwrite SpawnMap Failed!"), LotFilesManager256::instance()->errorString());
+    }
+}
+
+void MainWindow::overwriteSpawnMap_AllCells_256()
+{
+    overwriteSpawnMap256(this, mCurrentDocument, LotFilesManager256::GenerateAll);
+}
+
+void MainWindow::overwriteSpawnMap_SelectedCells_256()
+{
+    overwriteSpawnMap256(this, mCurrentDocument, LotFilesManager256::GenerateSelected);
+}
+
 static void _BMPToTMX(MainWindow *mainWin, Document *doc,
                       BMPToTMX::GenerateMode mode)
 {
@@ -2662,6 +2690,10 @@ void MainWindow::updateActions()
     ui->menuGenerate_Lots_8x8->setEnabled(worldDoc != 0);
     ui->actionGenerateLotsAll8x8->setEnabled(worldDoc != 0);
     ui->actionGenerateLotsSelected8x8->setEnabled(worldDoc && worldDoc->selectedCellCount());
+
+    ui->menuOverwriteSpawnMap256->setEnabled(worldDoc != nullptr);
+    ui->actionOverwriteSpawnMap_AllCells_256->setEnabled(worldDoc != nullptr);
+    ui->actionOverwriteSpawnMap_SelectedCells_256->setEnabled(worldDoc && worldDoc->selectedCellCount());
 
     ui->menuBMP_To_TMX->setEnabled(worldDoc != 0);
     ui->actionBMPToTMXAll->setEnabled(worldDoc != 0);
