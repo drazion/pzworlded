@@ -22,9 +22,12 @@
 #include "map.h"
 #include "maplevel.h"
 #include "mapmanager.h"
+#include "mapobject.h"
 #include "objectgroup.h"
 #include "world.h"
 #include "worldcell.h"
+
+#include "BuildingEditor/roofhiding.h"
 
 #include <QBuffer>
 #include <QCoreApplication>
@@ -520,9 +523,17 @@ public:
         point = QPoint(0, 0);
         for (Tiled::MapLevel *mapLevel : map->mapLevels()) {
             for (Tiled::ObjectGroup *objectGroup : mapLevel->objectGroups()) {
-                if (objectGroup->name().contains(QLatin1String("RoomDefs"))) {
-                    point.setX(objectGroup->x() + objectGroup->width() / 2);
-                    point.setY(objectGroup->y() + objectGroup->height() / 2);
+                if (objectGroup->name().contains(QLatin1String("RoomDefs")) == false)
+                    continue;
+                for (Tiled::MapObject *mapObject : objectGroup->objects()) {
+                    int index = mapObject->name().indexOf(QLatin1Char('#'));
+                    if (index == -1)
+                        continue;
+                    QString internalName = mapObject->name().left(index);
+                    if (BuildingEditor::RoofHiding::isEmptyOutside(internalName))
+                        continue;
+                    point.setX(mapObject->x() + mapObject->width() / 2);
+                    point.setY(mapObject->y() + mapObject->height() / 2);
                     level = mapLevel->level();
                     return true;
                 }
