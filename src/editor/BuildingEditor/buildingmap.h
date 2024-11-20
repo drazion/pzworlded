@@ -133,7 +133,7 @@ public:
     BuildingFloor *mFloor;
     QRegion mRegion;
     QVector<QPoint> stack;
-    QSet<Tiled::Tile*> mFloorTiles;
+    QSet<Tiled::Tile*> mBlockRainTiles;
 };
 
 class BuildingMap : public QObject

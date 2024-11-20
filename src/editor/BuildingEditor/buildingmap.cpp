@@ -450,6 +450,7 @@ BuildingMapEmptyOutsideFill::BuildingMapEmptyOutsideFill(Tiled::Map *map, Buildi
 {
     TileDefWatcher *tileDefWatcher = getTileDefWatcher();
     tileDefWatcher->check();
+    const QString BlockRain(QStringLiteral("BlockRain"));
     const QString solidfloor(QStringLiteral("solidfloor"));
     for (Tiled::Tileset *tileset : map->tilesets()) {
         TileDefTileset *tdts = tileDefWatcher->tileset(tileset->name());
@@ -457,8 +458,8 @@ BuildingMapEmptyOutsideFill::BuildingMapEmptyOutsideFill(Tiled::Map *map, Buildi
             continue;
         for (int i = 0; i < tileset->tileCount(); i++) {
             if (TileDefTile *tdt = tdts->tileAt(i)) {
-                if (tdt->mProperties.contains(solidfloor)) {
-                    mFloorTiles += tileset->tileAt(i);
+                if (tdt->mProperties.contains(BlockRain) || tdt->mProperties.contains(solidfloor)) {
+                    mBlockRainTiles += tileset->tileAt(i);
                 }
             }
         }
@@ -482,7 +483,7 @@ bool BuildingMapEmptyOutsideFill::isEmptyOutsideSquare(int x, int y)
         if (cell.isEmpty()) {
             continue;
         }
-        if (mFloorTiles.contains(cell.tile)) {
+        if (mBlockRainTiles.contains(cell.tile)) {
             return true;
         }
     }
