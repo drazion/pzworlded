@@ -121,7 +121,7 @@ void InGameMapImagePyramidWindow::createZip()
         }
     }
 
-    writePyramidTxt(zip);
+    writePyramidTxt(zip, image);
 
     zip.close();
 
@@ -150,7 +150,7 @@ void InGameMapImagePyramidWindow::writeImageToZip(QuaZip &zip, const QImage &ima
     file.close();
 }
 
-void InGameMapImagePyramidWindow::writePyramidTxt(QuaZip &zip)
+void InGameMapImagePyramidWindow::writePyramidTxt(QuaZip &zip, const QImage &image)
 {
     QString fileName = QStringLiteral("pyramid.txt");
     log(QStringLiteral("Writing %1").arg(fileName));
@@ -163,6 +163,7 @@ void InGameMapImagePyramidWindow::writePyramidTxt(QuaZip &zip)
     QTextStream ts(&file);
     ts << "VERSION=1\n";
     ts << QStringLiteral("bounds=%1 %2 %3 %4\n").arg(ui->xMin->value()).arg(ui->yMin->value()).arg(ui->xMax->value()).arg(ui->yMax->value());
+    ts << QStringLiteral("imageSize=%1 %2").arg(image.size().width()).arg(image.size().height());
     ts.flush();
     file.close();
 }
