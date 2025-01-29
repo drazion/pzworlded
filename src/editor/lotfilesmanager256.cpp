@@ -1873,21 +1873,6 @@ void LotFilesWorker256::resolveProperties(PropertyHolder *ph, PropertyList &resu
     }
 }
 
-qint8 LotFilesWorker256::calculateZombieDensity(int x, int y)
-{
-    // TODO: Get the total depth of 8x8 squares, then divide by 64.
-    const GenerateLotsSettings &lotSettings = mWorldDoc->world()->getGenerateLotsSettings();
-    int chunk300X = std::floor(x / float(CHUNK_WIDTH)) - lotSettings.worldOrigin.x() * CHUNKS_PER_CELL;
-    int chunk300Y = std::floor(y / float(CHUNK_HEIGHT)) - lotSettings.worldOrigin.y() * CHUNKS_PER_CELL;
-    const QImage& ZombieSpawnMap = mManager->ZombieSpawnMap;
-    if (chunk300X < 0 || chunk300Y < 0 || chunk300X >= ZombieSpawnMap.size().width() || chunk300Y >= ZombieSpawnMap.size().height()) {
-        return 0;
-    }
-    QRgb pixel = ZombieSpawnMap.pixel(chunk300X, chunk300Y);
-    int intensity = qRed(pixel);
-    return quint8(intensity);
-}
-
 void LotFilesWorker256::addJob()
 {
     scheduleWork();

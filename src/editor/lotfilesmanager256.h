@@ -86,7 +86,6 @@ public:
     bool processObjectGroups(CombinedCellMaps &combinedMaps, WorldCell *cell, MapComposite *mapComposite);
     bool processObjectGroup(CombinedCellMaps &combinedMaps,WorldCell *cell, Tiled::ObjectGroup *objectGroup, int levelOffset, const QPoint &offset);
     void resolveProperties(PropertyHolder *ph, PropertyList &result);
-    qint8 calculateZombieDensity(int x, int y);
 
 //    const QString tr(const char *str) const;
 

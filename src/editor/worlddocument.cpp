@@ -925,6 +925,16 @@ void WorldDocument::changeLuaSettings(const LuaSettings &settings)
     undoStack()->push(new ChangeLuaSettings(this, settings));
 }
 
+void WorldDocument::setInGameMapXMLFileName(const QString &fileName)
+{
+    mInGameMapXMLFileName = fileName;
+}
+
+QString WorldDocument::getInGameMapXMLFileName() const
+{
+    return mInGameMapXMLFileName;
+}
+
 void WorldDocument::moveBMP(WorldBMP *bmp, const QPoint &topLeft)
 {
     undoStack()->push(new MoveBMP(this, bmp, topLeft));

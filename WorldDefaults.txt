@@ -549,3 +549,32 @@ objectgroup
 }
 
 
+property
+{
+    name = Rocks
+    default = false
+}
+
+template
+{
+    name = WorldGen
+    property
+    {
+        name = Rocks
+        value = false
+    }
+}
+
+objecttype
+{
+    name = WorldGen
+}
+
+objectgroup
+{
+    name = WorldGen
+    color = #ffaa00
+    defaulttype = WorldGen
+}
+
+

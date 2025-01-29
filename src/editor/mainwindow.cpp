@@ -326,7 +326,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->actionOverwriteInGameMapFeaturesXML, &QAction::triggered, this, &MainWindow::overwriteInGameMapFeaturesXML);
     connect(ui->actionOverwriteInGameMapFeaturesXML_256, &QAction::triggered, this, &MainWindow::overwriteInGameMapFeaturesXML_256);
     connect(ui->actionCreateWorldImage, &QAction::triggered, this, &MainWindow::createInGameMapImage);
-    connect(ui->actionCreateImagePyramid, &QAction::triggered, this, &MainWindow::creaeInGameMapImagePyramid);
+    connect(ui->actionCreateImagePyramid, &QAction::triggered, this, &MainWindow::createInGameMapImagePyramid);
 
     connect(ui->actionShowCellBorder, &QAction::toggled, prefs, &Preferences::setShowCellBorder);
     connect(ui->actionSnapToGrid, &QAction::toggled, prefs, &Preferences::setSnapToGrid);
@@ -2371,13 +2371,15 @@ void MainWindow::readInGameMapFeaturesXML()
     filter += selectedFilter;
 
     QString fileName = QFileDialog::getOpenFileName(this, tr("Read Features XML"),
-                                                    Preferences::instance()->worldMapXMLFile(),
+                                                    worldDoc->getInGameMapXMLFileName(),
                                                     filter, &selectedFilter);
     if (fileName.isEmpty()) {
         return;
     }
 
-    Preferences::instance()->setWorldMapXMLFile(QFileInfo(fileName).absoluteFilePath());
+    QString absolutePath = QFileInfo(fileName).absoluteFilePath();
+    worldDoc->setInGameMapXMLFileName(absolutePath);
+    Preferences::instance()->setWorldMapXMLFile(absolutePath);
 
     PROGRESS progress(QStringLiteral("Reading InGameMap XML"), this);
 
@@ -2480,7 +2482,10 @@ void MainWindow::writeInGameMapFeaturesXML(bool b256)
 {
     WorldDocument *worldDoc = currentWorldDocument();
 
-    QString suggestedFileName = Preferences::instance()->worldMapXMLFile();
+    QString suggestedFileName = worldDoc->getInGameMapXMLFileName();
+    if (suggestedFileName.isEmpty()) {
+        suggestedFileName = Preferences::instance()->worldMapXMLFile();
+    }
     if (suggestedFileName.isEmpty() || !QFileInfo::exists(suggestedFileName)) {
         if (worldDoc->fileName().isEmpty()) {
             suggestedFileName = QDir::currentPath();
@@ -2497,7 +2502,9 @@ void MainWindow::writeInGameMapFeaturesXML(bool b256)
         return;
     }
 
-    Preferences::instance()->setWorldMapXMLFile(QFileInfo(fileName).absoluteFilePath());
+    QString absolutePath = QFileInfo(fileName).absoluteFilePath();
+    worldDoc->setInGameMapXMLFileName(absolutePath);
+    Preferences::instance()->setWorldMapXMLFile(absolutePath);
 
     PROGRESS progress(QStringLiteral("Writing InGameMap XML"), this);
 
@@ -2521,7 +2528,7 @@ void MainWindow::overwriteInGameMapFeaturesXML(bool b256)
     PROGRESS progress(QStringLiteral("Writing InGameMap XML"), this);
 
     InGameMapWriter writer;
-    QString fileName = Preferences::instance()->worldMapXMLFile();
+    QString fileName = worldDoc->getInGameMapXMLFileName(); // Preferences::instance()->worldMapXMLFile();
     if (!writer.writeWorld(worldDoc->world(), fileName)) {
         qWarning("Failed to write InGameMap XML.");
         return;
@@ -2540,7 +2547,7 @@ void MainWindow::createInGameMapImage()
     dialog.exec();
 }
 
-void MainWindow::creaeInGameMapImagePyramid()
+void MainWindow::createInGameMapImagePyramid()
 {
     InGameMapImagePyramidWindow *window = new InGameMapImagePyramidWindow(this);
     window->show();
@@ -2674,6 +2681,7 @@ void MainWindow::updateActions()
     bool hasDoc = doc != 0;
     CellDocument *cellDoc = hasDoc ? doc->asCellDocument() : 0;
     WorldDocument *worldDoc = hasDoc ? doc->asWorldDocument() : 0;
+    WorldDocument *currentWorldDoc = cellDoc ? cellDoc->worldDocument() : worldDoc;
     World *world = worldDoc ? worldDoc->world() : (cellDoc ? cellDoc->world() : nullptr);
     bool bEnable10x10 = false;
 
@@ -2756,7 +2764,7 @@ void MainWindow::updateActions()
     ui->actionReadInGameMapFeaturesXML->setEnabled(hasDoc);
     ui->actionWriteInGameMapFeaturesXML->setEnabled(hasDoc && bEnable10x10);
     ui->actionWriteInGameMapFeaturesXML_256->setEnabled(hasDoc);
-    QString featuresXML = Preferences::instance()->worldMapXMLFile();
+    QString featuresXML = currentWorldDoc ? currentWorldDoc->getInGameMapXMLFileName() : QString(); // Preferences::instance()->worldMapXMLFile();
     bool hasReadFeaturesXML = false;
     if (hasDoc && !featuresXML.isEmpty()) {
         for (auto* cell : world->cells()) {

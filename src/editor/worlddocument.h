@@ -426,6 +426,9 @@ public:
     void changeGenerateLotsSettings(const GenerateLotsSettings &settings);
     void changeLuaSettings(const LuaSettings &settings);
 
+    void setInGameMapXMLFileName(const QString &fileName);
+    QString getInGameMapXMLFileName() const;
+
     void moveBMP(WorldBMP *bmp, const QPoint &topLeft);
     void insertBMP(int index, WorldBMP *bmp);
     void removeBMP(WorldBMP *bmp);
@@ -564,6 +567,7 @@ private:
     QList<InGameMapFeature*> mSelectedInGameMapFeatures;
     QList<WorldBMP*> mSelectedBMPs;
     QString mFileName;
+    QString mInGameMapXMLFileName;
 
     friend class WorldDocumentUndoRedo;
     WorldDocumentUndoRedo mUndoRedo;
