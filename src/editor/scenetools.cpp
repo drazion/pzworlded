@@ -150,9 +150,11 @@ CreateObjectTool::CreateObjectTool()
 }
 
 void CreateObjectTool::mousePressEvent(QGraphicsSceneMouseEvent *event)
-{
+{    
     if (event->button() == Qt::LeftButton) {
 #if 1
+        mStartScenePos = event->scenePos();
+        mMousePressed = true;
         mAnchorPos = mScene->renderer()->pixelToTileCoordsInt(event->scenePos(), mScene->document()->currentLevel());
 #else
         mAnchorPos = mScene->renderer()->pixelToTileCoords(event->scenePos(), mScene->document()->currentLevel());
@@ -162,9 +164,9 @@ void CreateObjectTool::mousePressEvent(QGraphicsSceneMouseEvent *event)
             snapToGrid = !snapToGrid;
         if (snapToGrid)
             mAnchorPos = mAnchorPos.toPoint();
-#endif
 
         startNewMapObject(mAnchorPos);
+#endif
         event->accept();
     }
 
@@ -198,6 +200,14 @@ void CreateObjectTool::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
         mItem->object()->setHeight(qMax(MIN_OBJECT_SIZE, bounds.height() + 1));
         mItem->synchWithObject();
         event->accept();
+        return;
+    }
+    if (mMousePressed) {
+        const int dragDistance = (mStartScenePos - event->scenePos()).manhattanLength();
+        if (dragDistance >= QApplication::startDragDistance()) {
+            startNewMapObject(mAnchorPos);
+        }
+        event->accept();
     }
 }
 
@@ -206,10 +216,19 @@ void CreateObjectTool::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
     if ((event->button() == Qt::LeftButton) && mItem) {
         if ((mItem->object()->width() < MIN_OBJECT_SIZE) || (mItem->object()->height() < MIN_OBJECT_SIZE))
             cancelNewMapObject();
-        else
+        else {
+            WorldCellObject *obj = mItem->object();
             finishNewMapObject();
+#if 1
+            if (!(event->modifiers() & Qt::ControlModifier)) {
+                ToolManager::instance()->selectTool(SelectMoveObjectTool::instance());
+                mScene->document()->setSelectedObjects(QList<WorldCellObject*>() << obj);
+            }
+#endif
+        }
         event->accept();
     }
+    mMousePressed = false;
 }
 
 void CreateObjectTool::startNewMapObject(const QPointF &pos)
@@ -258,9 +277,6 @@ void CreateObjectTool::finishNewMapObject()
     mScene->worldDocument()->addCellObject(mScene->cell(),
                                            mScene->cell()->objects().size(),
                                            obj);
-#if 0 // only select objects when the ObjectTool is current
-    mScene->document()->setSelectedObjects(QList<WorldCellObject*>() << obj);
-#endif
 }
 
 /////
@@ -2302,6 +2318,10 @@ void AbstractCreatePolygonObjectTool::mouseReleaseEvent(QGraphicsSceneMouseEvent
 {
     if (event->button() == Qt::LeftButton) {
     }
+    if (mNewObject && (event->buttons() == Qt::NoButton)) {
+        selectNewObject(mNewObject, event->modifiers());
+    }
+    mNewObject = nullptr;
 }
 
 void AbstractCreatePolygonObjectTool::finishItem()
@@ -2328,6 +2348,7 @@ void AbstractCreatePolygonObjectTool::finishItem()
             object->setPoints(points);
             object->calculateBounds();
             mScene->worldDocument()->addCellObject(mScene->cell(), mScene->cell()->objects().size(), object);
+            mNewObject = object;
         }
         break;
     case ObjectGeometryType::Polyline:
@@ -2345,12 +2366,21 @@ void AbstractCreatePolygonObjectTool::finishItem()
             object->setPoints(points);
             object->calculateBounds();
             mScene->worldDocument()->addCellObject(mScene->cell(), mScene->cell()->objects().size(), object);
+            mNewObject = object;
         }
         break;
     }
 
     mPolygon.clear();
     updatePathItem();
+}
+
+void AbstractCreatePolygonObjectTool::selectNewObject(WorldCellObject *obj, Qt::KeyboardModifiers modifiers)
+{
+    if (!(modifiers & Qt::ControlModifier)) {
+        ToolManager::instance()->selectTool(SelectMoveObjectTool::instance());
+        mScene->document()->setSelectedObjects(QList<WorldCellObject*>() << obj);
+    }
 }
 
 void AbstractCreatePolygonObjectTool::updatePathItem()

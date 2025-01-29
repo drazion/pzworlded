@@ -207,6 +207,8 @@ private:
     void finishNewMapObject();
 
 private:
+    bool mMousePressed = false;
+    QPointF mStartScenePos;
     QPointF mAnchorPos;
     ObjectItem *mItem;
     static CreateObjectTool *mInstance;
@@ -695,6 +697,7 @@ public:
 
 private:
     void finishItem();
+    void selectNewObject(WorldCellObject *obj, Qt::KeyboardModifiers modifiers);
     void updatePathItem();
     void addPoint(const QPointF& scenePos);
 
@@ -703,6 +706,7 @@ private:
     QList<QGraphicsItem*> mPointItems;
     QPolygon mPolygon;
     QPointF mScenePos;
+    WorldCellObject *mNewObject = nullptr;
 };
 
 class CreatePointObjectTool : public AbstractCreatePolygonObjectTool, public Singleton<CreatePointObjectTool>
