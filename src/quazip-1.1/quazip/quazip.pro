@@ -17,14 +17,14 @@ DEFINES += QUAZIP_BUILD QUAZIP_STATIC
 #target.path = $${LIBDIR}
 #INSTALLS += target
 
-macx {
-    DESTDIR = ../../bin/TileZed.app/Contents/Frameworks
-    QMAKE_LFLAGS_SONAME = -Wl,-install_name,@executable_path/../Frameworks/
-} else {
+#macx {
+#    DESTDIR = ../../bin/PZWorldEd.app/Contents/Frameworks
+#    QMAKE_LFLAGS_SONAME = -Wl,-install_name,@executable_path/../Frameworks/
+#} else {
     DESTDIR = $$top_builddir/lib
-}
+#}
 
-DLLDESTDIR = $$top_builddir
+#DLLDESTDIR = $$top_builddir
 
 SOURCES += \
     unzip.c \

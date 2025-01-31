@@ -12,8 +12,8 @@ win32:DEFINES += ZLIB_DLL
 #INSTALLS += target
 
 macx {
-    DESTDIR = ../../bin/TileZed.app/Contents/Frameworks
-    QMAKE_LFLAGS_SONAME = -Wl,-install_name,@executable_path/../Frameworks/
+    DESTDIR = ../../bin/PZWorldEd.app/Contents/Frameworks
+    QMAKE_LFLAGS_SONAME = -Wl,-install_name,@rpath/../Frameworks/
 } else {
     DESTDIR = $$top_builddir/lib
 }

@@ -8,7 +8,7 @@ TARGET = tiled
 #INSTALLS += target
 macx {
     DESTDIR = ../../bin/PZWorldEd.app/Contents/Frameworks
-    QMAKE_LFLAGS_SONAME = -Wl,-install_name,@executable_path/../Frameworks/
+    QMAKE_LFLAGS_SONAME = -Wl,-install_name,@rpath/../Frameworks/
 } else {
     DESTDIR = ../../lib
 }
