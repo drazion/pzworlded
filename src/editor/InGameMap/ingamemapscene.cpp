@@ -454,12 +454,16 @@ public:
                QWidget *widget = nullptr);
 
     void hoverEnterEvent(QGraphicsSceneHoverEvent *event) {
+        Q_UNUSED(event)
+
         if (++mHoverRefCount == 1) {
             update();
         }
     }
 
     void hoverLeaveEvent(QGraphicsSceneHoverEvent *event) {
+        Q_UNUSED(event)
+
         if (--mHoverRefCount == 0) {
             update();
         }
@@ -893,7 +897,7 @@ void EditInGameMapFeatureTool::deactivate()
 {
     if (mSelectedFeatureItem) {
         mSelectedFeatureItem->setEditable(false);
-        for (FeatureHandle* handle : qAsConst(mHandles)) {
+        for (FeatureHandle* handle : std::as_const(mHandles)) {
             mScene->removeItem(handle);
             delete handle;
         }
@@ -951,6 +955,7 @@ void EditInGameMapFeatureTool::mousePressEvent(QGraphicsSceneMouseEvent *event)
 
 void EditInGameMapFeatureTool::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
 {
+    Q_UNUSED(event)
 }
 
 void EditInGameMapFeatureTool::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
@@ -971,6 +976,8 @@ void EditInGameMapFeatureTool::featureAboutToBeRemoved(WorldCell* cell, int feat
 
 void EditInGameMapFeatureTool::featurePointMoved(WorldCell* cell, int featureIndex, int pointIndex)
 {
+    Q_UNUSED(pointIndex)
+
     InGameMapFeature* feature = cell->inGameMap().mFeatures.at(featureIndex);
     if (feature == mSelectedFeature) {
 //        mSelectedFeatureItem->synchWithFeature();
@@ -1004,7 +1011,7 @@ void EditInGameMapFeatureTool::setSelectedItem(InGameMapFeatureItem *featureItem
     if (mSelectedFeatureItem) {
         // The item may have been deleted if inside featureAboutToBeRemoved()
         if (mScene->itemForInGameMapFeature(mSelectedFeature)) {
-            for (auto* handle : qAsConst(mHandles)) {
+            for (auto* handle : std::as_const(mHandles)) {
                 mScene->removeItem(handle);
                 delete handle;
             }

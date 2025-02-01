@@ -26,13 +26,13 @@ class Singleton
 public:
     static T &instance()
     {
-        Q_ASSERT(mInstance);
+        Q_ASSERT(mInstance != nullptr);
         return *mInstance;
     }
 
     static T *instancePtr()
     {
-        Q_ASSERT(mInstance);
+        Q_ASSERT(mInstance != nullptr);
         return mInstance;
     }
 
@@ -48,7 +48,7 @@ public:
 
     Singleton()
     {
-        Q_ASSERT(!mInstance);
+        Q_ASSERT(mInstance == nullptr);
         mInstance = static_cast< T* >( this );
     }
 

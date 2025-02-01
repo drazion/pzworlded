@@ -22,7 +22,7 @@ InGameMapPropertyDialog::InGameMapPropertyDialog(QWidget *parent) :
     for (auto* cell : world->cells()) {
         const InGameMapFeatures &features = cell->inGameMap().features();
         for (const auto& feature : features) {
-            for (const auto& prop : qAsConst(feature->properties())) {
+            for (const auto& prop : std::as_const(feature->properties())) {
                 keySet += prop.mKey;
                 valueSet += prop.mValue;
             }

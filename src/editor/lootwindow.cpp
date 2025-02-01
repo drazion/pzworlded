@@ -45,6 +45,8 @@ extern "C" {
 // these are where print() calls go
 void luai_writestring(const char *s, int len)
 {
+    Q_UNUSED(s)
+    Q_UNUSED(len)
 }
 
 void luai_writeline()

@@ -51,10 +51,10 @@ public:
     public:
         Container(MapBuildingsNS::Room *r, int x, int y, int z, const QString &type) :
             mRoom(r),
+            mType(type),
             mX(x),
             mY(y),
-            mZ(z),
-            mType(type)
+            mZ(z)
         {
 
         }

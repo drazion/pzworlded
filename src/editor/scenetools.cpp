@@ -2341,7 +2341,7 @@ void AbstractCreatePolygonObjectTool::finishItem()
                                                           mScene->document()->currentLevel(),
                                                           MIN_OBJECT_SIZE, MIN_OBJECT_SIZE);
             WorldCellObjectPoints points;
-            for (const QPoint& point : qAsConst(mPolygon)) {
+            for (const QPoint& point : std::as_const(mPolygon)) {
                 points += WorldCellObjectPoint(point.x(), point.y());
             }
             object->setGeometryType(mGeometryType);
@@ -2359,7 +2359,7 @@ void AbstractCreatePolygonObjectTool::finishItem()
                                                           mScene->document()->currentLevel(),
                                                           MIN_OBJECT_SIZE, MIN_OBJECT_SIZE);
             WorldCellObjectPoints points;
-            for (const QPoint& point : qAsConst(mPolygon)) {
+            for (const QPoint& point : std::as_const(mPolygon)) {
                 points += WorldCellObjectPoint(point.x(), point.y());
             }
             object->setGeometryType(mGeometryType);
@@ -2399,7 +2399,7 @@ void AbstractCreatePolygonObjectTool::updatePathItem()
         QPointF scenePos = mScene->renderer()->tileToPixelCoords(tilePos);
         path.addRect(scenePos.x() - 5, scenePos.y() - 5, 10, 10);
     } else {
-        for (const QPoint& point : qAsConst(mPolygon)) {
+        for (const QPoint& point : std::as_const(mPolygon)) {
             QPointF p = mScene->renderer()->tileToPixelCoords(point);
             path.addRect(p.x() - 5, p.y() - 5, 10, 10);
         }
@@ -2549,7 +2549,7 @@ void EditPolygonObjectTool::deactivate()
 {
     if (mSelectedObjectItem) {
         mSelectedObjectItem->setEditable(false);
-        for (ObjectPointHandle* handle : qAsConst(mHandles)) {
+        for (ObjectPointHandle* handle : std::as_const(mHandles)) {
             mScene->removeItem(handle);
             delete handle;
         }
@@ -2692,7 +2692,7 @@ void EditPolygonObjectTool::selectedObjectsChanged()
 
 void EditPolygonObjectTool::selectedObjectPointsChanged()
 {
-    for (auto* handle : qAsConst(mHandles)) {
+    for (auto* handle : std::as_const(mHandles)) {
         handle->update();
     }
 }
@@ -2702,7 +2702,7 @@ void EditPolygonObjectTool::setSelectedItem(ObjectItem *objectItem)
     if (mSelectedObjectItem) {
         // The item may have been deleted if inside objectAboutToBeRemoved()
         if (mScene->itemForObject(mSelectedObject)) {
-            for (auto* handle : qAsConst(mHandles)) {
+            for (auto* handle : std::as_const(mHandles)) {
                 mScene->removeItem(handle);
                 delete handle;
             }
@@ -4492,6 +4492,9 @@ QRectF CellObjectEdgeResizeHandle::boundingRect() const
 
 void CellObjectEdgeResizeHandle::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget)
 {
+    Q_UNUSED(option)
+    Q_UNUSED(widget)
+
     QPen pen(Qt::blue);
     pen.setWidth(3);
     pen.setCosmetic(true);

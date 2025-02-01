@@ -223,7 +223,7 @@ void MapImageManager::recreateMapImage(const QString &mapName, const QString &re
         return;
     MapInfo *mapInfo = MapManager::instance()->mapInfo(mapFilePath);
 
-    for (auto *mapImage : qAsConst(mMapImages)) {
+    for (auto *mapImage : std::as_const(mMapImages)) {
         if (mapImage->sources().contains(mapInfo)) {
             mapFileChanged(mapInfo);
             return;
@@ -240,6 +240,8 @@ void MapImageManager::recreateMapImage(const QString &mapName, const QString &re
 
 MapImage *MapImageManager::getZombieSpawnImage(const QString &imageName, const QString &relativeTo)
 {
+    Q_UNUSED(relativeTo)
+
     QString keyName = QFileInfo(imageName).canonicalFilePath();
     if (mMapImages.contains(keyName))
         return mMapImages[keyName];

@@ -81,7 +81,7 @@ static bool tryCreateAtlas(Tileset *tileset, const QImage &image, int size)
         extents[0] = std::numeric_limits<uint16_t>::max();
         extents[1] = std::numeric_limits<uint16_t>::max();
         extents[2] = extents[3] = 0;
-        for (uint32_t id : qAsConst(ids)) {
+        for (uint32_t id : std::as_const(ids)) {
             uint16_t xywh[4];
             atlas_get_vtex_xywh_coords(atlas, id, 0, xywh);
             extents[0] = std::min(extents[0], (uint32_t) xywh[0] - padding);

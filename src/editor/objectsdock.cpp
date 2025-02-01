@@ -939,13 +939,11 @@ bool ObjectsModel::dropMimeData(const QMimeData *data,
      QByteArray encodedData = data->data(ObjectsModelMimeType);
      QDataStream stream(&encodedData, QIODevice::ReadOnly);
      QList<WorldCellObject*> objects;
-     int rows = 0;
 
      while (!stream.atEnd()) {
          QString text;
          stream >> text;
          objects << mCell->objects().at(text.toInt());
-         ++rows;
      }
 
      // Note: parentItem may be destroyed by setCell()

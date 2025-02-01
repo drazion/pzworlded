@@ -73,11 +73,13 @@ IsoGridSquare256 *IsoChunk256::getGridSquareWorldPos(int x, int y, int z)
 
 bool IsoChunk256::contains(int x, int y, int z)
 {
+    Q_UNUSED(z)
     return x >= 0 && x < CHUNK_SIZE_256 && y >= 0 && y < CHUNK_SIZE_256;
 }
 
 bool IsoChunk256::containsWorldPos(int x, int y, int z)
 {
+    Q_UNUSED(z)
     return x >= worldXMin() && x < worldXMax() && y >= worldYMin() && y < worldYMax();
 }
 

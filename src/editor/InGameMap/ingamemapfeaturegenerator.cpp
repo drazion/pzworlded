@@ -563,6 +563,8 @@ bool InGameMapFeatureGenerator::processObjectGroup(WorldCell *cell, ObjectGroup 
 bool InGameMapFeatureGenerator::processObjectGroup(WorldCell *cell, MapInfo *mapInfo, ObjectGroup *objectGroup, int levelOffset,
                                                    const QPoint &offset, QRect &bounds, QVector<QRect> &rects)
 {
+    Q_UNUSED(mapInfo)
+
     if (objectGroup->name().contains(QLatin1String("RoomDefs")) == false) {
         return true;
     }
@@ -945,7 +947,7 @@ bool InGameMapFeatureGenerator::doWater(WorldCell *cell, MapInfo *mapInfo)
     auto isWaterAt = [&](int x, int y) {
         cells.resize(0);
         layerGroup->orderedCellsAt2({x, y}, cells);
-        for (auto* cell : qAsConst(cells)) {
+        for (auto* cell : std::as_const(cells)) {
             if (cell->isEmpty())
                 continue;
             if ((cell->tile->id() < 8) && (cell->tile->tileset()->name() == QStringLiteral("blends_natural_02"))) {
@@ -1068,7 +1070,7 @@ bool InGameMapFeatureGenerator::doTrees(WorldCell *cell, MapInfo *mapInfo)
     auto isTreeAt = [&](int _x, int _y) {
         cells.resize(0);
         layerGroup->orderedCellsAt2({_x, _y}, cells);
-        for (auto* cell : qAsConst(cells)) {
+        for (auto* cell : std::as_const(cells)) {
             if (cell->isEmpty())
                 continue;
             if (cell->tile->id() >= 8 && cell->tile->id() <= 15 && cell->tile->tileset()->name() == QStringLiteral("vegetation_trees_01")) {

@@ -59,11 +59,13 @@ IsoGridSquare *IsoChunk::getGridSquareWorldPos(int x, int y, int z)
 
 bool IsoChunk::contains(int x, int y, int z)
 {
+    Q_UNUSED(z)
     return x >= 0 && x < WIDTH && y >= 0 && y < WIDTH;
 }
 
 bool IsoChunk::containsWorldPos(int x, int y, int z)
 {
+    Q_UNUSED(z)
     return x >= worldXMin() && x < worldXMax() && y >= worldYMin() && y < worldYMax();
 }
 

@@ -311,7 +311,7 @@ TilesetTexturesPerContext::~TilesetTexturesPerContext()
     if (mContext != nullptr) {
         QOpenGLContext *context = mContext->shareContext() ? mContext->shareContext() : mContext;
         if (context->makeCurrent(context->surface())) {
-            for (TilesetTexture *texture : qAsConst(mTextures)) {
+            for (TilesetTexture *texture : std::as_const(mTextures)) {
 #if TILESET_TEXTURE_GL
                 texture->mTexture->destroy();
                 delete texture->mTexture;
@@ -493,7 +493,7 @@ void TilesetTextures::aboutToBeDestroyed()
 void TilesetTextures::tilesetChanged(Tileset *tileset)
 {
     qDebug() << "TilesetTextures CHANGED" << tileset->name();
-    for (TilesetTexturesPerContext *contextTextures : qAsConst(mContextToTextures)) {
+    for (TilesetTexturesPerContext *contextTextures : std::as_const(mContextToTextures)) {
         contextTextures->mChanged[tileset->name()] = tileset->changeCount();
     }
 #if 0
@@ -505,7 +505,7 @@ void TilesetTextures::tilesetChanged(Tileset *tileset)
         return;
     }
 
-    for (TilesetTexturesPerContext *contextTextures : qAsConst(mContextToTextures)) {
+    for (TilesetTexturesPerContext *contextTextures : std::as_const(mContextToTextures)) {
         if (contextTextures->mTextureMap.contains(tileset->name()) == false) {
             continue;
         }
@@ -542,7 +542,7 @@ LayerGroupVBO::~LayerGroupVBO()
     if (mCreated == false) {
         qDeleteAll(mTiles);
         mTiles.fill(nullptr);
-        for (int i = 0; i < mMapCompositeVBO->mLayerVBOs.size(); i++) {
+        for (size_t i = 0; i < mMapCompositeVBO->mLayerVBOs.size(); i++) {
             if (mMapCompositeVBO->mLayerVBOs[i] == this) {
                 mMapCompositeVBO->mLayerVBOs[i] = nullptr;
                 break;
@@ -554,7 +554,7 @@ LayerGroupVBO::~LayerGroupVBO()
         if (mContext->makeCurrent(mContext->surface())) {
             qDeleteAll(mTiles);
             mTiles.fill(nullptr);
-            for (int i = 0; i < mMapCompositeVBO->mLayerVBOs.size(); i++) {
+            for (size_t i = 0; i < mMapCompositeVBO->mLayerVBOs.size(); i++) {
                 if (mMapCompositeVBO->mLayerVBOs[i] == this) {
                     mMapCompositeVBO->mLayerVBOs[i] = nullptr;
                     break;
@@ -669,7 +669,7 @@ void LayerGroupVBO::paint2(QPainter *painter, Tiled::MapRenderer *renderer, cons
 #endif
     }
 
-    for (VBOTiles *vboTiles : qAsConst(exposedTiles)) {
+    for (VBOTiles *vboTiles : std::as_const(exposedTiles)) {
 //        VBOTiles *vboTiles = mTiles[vxy.x() + vxy.y() * VBO_PER_CELL];
 //        if (vboTiles == nullptr)
 //            continue;
@@ -835,7 +835,7 @@ void LayerGroupVBO::paint2(QPainter *painter, Tiled::MapRenderer *renderer, cons
         bool bShowInvisibleTiles = Preferences::instance()->showInvisibleTiles();
         {
             VBOTiles *currentTiles = nullptr;
-            for (const QPoint& square : qAsConst(squares)) {
+            for (const QPoint& square : std::as_const(squares)) {
                 VBOTiles *vboTiles = (currentTiles != nullptr && currentTiles->mBounds.contains(square)) ? currentTiles : getTilesFor(square, false);
                 if (vboTiles == nullptr)
                     continue;
@@ -1057,12 +1057,12 @@ void LayerGroupVBO::gatherTiles(Tiled::MapRenderer *renderer, const QRectF& expo
     const int tileHeight = DISPLAY_TILE_HEIGHT;
 
     Tile *invisibleTile = Internal::TilesetManager::instance()->invisibleTile();
-    bool bShowInvisibleTiles = Preferences::instance()->showInvisibleTiles();
+    // bool bShowInvisibleTiles = Preferences::instance()->showInvisibleTiles();
     Tile *missingTile = Internal::TilesetManager::instance()->missingTile();
 
     QVector<TilePlusLayer> cells(40); // or QVarLengthArray
 
-    for (const QPoint& point : qAsConst(rasterize.mPoints)) {
+    for (const QPoint& point : std::as_const(rasterize.mPoints)) {
         VBOTiles *vboTiles = getTilesFor(point * VBO_SQUARES, true);
         if (vboTiles != nullptr) {
             exposedTiles += vboTiles;
@@ -1165,7 +1165,7 @@ int LayerGroupVBO::tryAddExtraJumbo_Trunk(const Tiled::Tile *tile, const QPointF
     }
     Tileset *tileset = tile->tileset();
     QString tilesetName = tileset->name();
-    for (int i = 0; i < sizeof(s_jumbo) / sizeof(JUMBO); i++) {
+    for (size_t i = 0; i < sizeof(s_jumbo) / sizeof(JUMBO); i++) {
         if (s_jumbo[i].bHasLeaves && tilesetName.startsWith(s_jumbo[i].tilesetName)) {
             Tile *tile2 = tileset->tileAt(columns * row_trunk + tile->id() % columns);
 
@@ -1194,7 +1194,7 @@ int LayerGroupVBO::tryAddExtraJumbo_Leaves(const Tiled::Tile *tile, const QPoint
     }
     Tileset *tileset = tile->tileset();
     QString tilesetName = tileset->name();
-    for (int i = 0; i < sizeof(s_jumbo) / sizeof(JUMBO); i++) {
+    for (size_t i = 0; i < sizeof(s_jumbo) / sizeof(JUMBO); i++) {
         if (s_jumbo[i].bHasLeaves && tilesetName.startsWith(s_jumbo[i].tilesetName)) {
             Tile *tile2 = tileset->tileAt(columns * row_summer + tile->id() % columns);
 
@@ -3253,9 +3253,9 @@ void ObjectItem::hoverMoveEvent(QGraphicsSceneHoverEvent *event)
     // Find the line segment the mouse pointer is over
     int closestIndex = -1;
     float closestDist = 10000;
-    int size = scenePoly.size();
-    if (isPolygon() == false)
-        size--;
+    // int size = scenePoly.size();
+    // if (isPolygon() == false)
+    //     size--;
     for (int i = 0; i < scenePoly.size(); i++) {
         QVector2D p1(scenePoly[i]);
         QVector2D p2(scenePoly[(i+1) % scenePoly.size()]);
@@ -4595,9 +4595,11 @@ void CellScene::setTool(AbstractTool *tool)
             item->setEditable(true);
     }
 
-    if (mActiveTool != CellEditRoadTool::instance())
-        foreach (CellRoadItem *item, mRoadItems)
+    if (mActiveTool != CellEditRoadTool::instance()) {
+        for (CellRoadItem *item : std::as_const(mRoadItems)) {
             item->setEditable(false);
+        }
+    }
     if (mActiveTool != CellSelectMoveRoadTool::instance())
         worldDocument()->setSelectedRoads(QList<Road*>());
 
@@ -4608,14 +4610,14 @@ void CellScene::setTool(AbstractTool *tool)
     }
 
     bool bFeatureToolActive = dynamic_cast<BaseInGameMapFeatureTool*>(mActiveTool) != nullptr;
-    for (InGameMapFeatureItem* item : qAsConst(mFeatureItems)) {
+    for (InGameMapFeatureItem* item : std::as_const(mFeatureItems)) {
         item->setVisible(bFeatureToolActive);
     }
-    for (AdjacentMap *adjacentMap : qAsConst(mAdjacentMaps)) {
+    for (AdjacentMap *adjacentMap : std::as_const(mAdjacentMaps)) {
         adjacentMap->setTool(mActiveTool);
     }
     if (mActiveTool != EditInGameMapFeatureTool::instancePtr()) {
-        for (InGameMapFeatureItem* item : qAsConst(mFeatureItems)) {
+        for (InGameMapFeatureItem* item : std::as_const(mFeatureItems)) {
             item->setEditable(false);
         }
     }
@@ -5422,6 +5424,9 @@ void CellScene::inGameMapFeatureAboutToBeRemoved(WorldCell *cell, int index)
 
 void CellScene::inGameMapPointMoved(WorldCell *cell, int featureIndex, int coordIndex, int pointIndex)
 {
+    Q_UNUSED(coordIndex)
+    Q_UNUSED(pointIndex)
+
     if (cell != this->cell())
         return;
 
@@ -6438,7 +6443,7 @@ WorldDocument *AdjacentMap::worldDocument() const
 
 ObjectItem *AdjacentMap::itemForObject(WorldCellObject *obj)
 {
-    for (ObjectItem *item : qAsConst(mObjectItems)) {
+    for (ObjectItem *item : std::as_const(mObjectItems)) {
         if (item->object() == obj)
             return item;
     }
@@ -6447,7 +6452,7 @@ ObjectItem *AdjacentMap::itemForObject(WorldCellObject *obj)
 
 InGameMapFeatureItem *AdjacentMap::itemForFeature(InGameMapFeature *feature)
 {
-    for (InGameMapFeatureItem *item : qAsConst(mInGameMapFeatureItems)) {
+    for (InGameMapFeatureItem *item : std::as_const(mInGameMapFeatureItems)) {
         if (item->feature() == feature) {
             return item;
         }
@@ -6642,6 +6647,7 @@ void AdjacentMap::cellObjectReordered(WorldCellObject *obj)
 
 void AdjacentMap::cellObjectPointMoved(WorldCell *cell, int objectIndex, int pointIndex)
 {
+    Q_UNUSED(pointIndex)
     cellObjectPointsChanged(cell, objectIndex);
 }
 
@@ -6701,6 +6707,7 @@ void AdjacentMap::inGameMapFeatureAboutToBeRemoved(WorldCell *cell, int index)
 
 void AdjacentMap::inGameMapPointMoved(WorldCell *cell, int featureIndex, int coordIndex, int pointIndex)
 {
+    Q_UNUSED(coordIndex)
     Q_UNUSED(pointIndex)
 
     InGameMapFeature *feature = cell->inGameMap().features().at(featureIndex);

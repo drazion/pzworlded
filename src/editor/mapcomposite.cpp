@@ -200,7 +200,7 @@ void CompositeLayerGroup::prepareDrawing(const MapRenderer *renderer, const QRec
     mPreparedSubMapLayers.resize(0);
     if (mAnyVisibleLayers == false)
         return;
-    for (const SubMapLayers &subMapLayer : qAsConst(mVisibleSubMapLayers)) {
+    for (const SubMapLayers &subMapLayer : std::as_const(mVisibleSubMapLayers)) {
         CompositeLayerGroup *layerGroup = subMapLayer.mLayerGroup;
         if (subMapLayer.mSubMap->isHiddenDuringDrag())
             continue;

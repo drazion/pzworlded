@@ -297,9 +297,9 @@ class RectLookup
 {
 public:
     RectLookup() :
+        mSquaresPerChunk(0),
         mMinSquareX(-1),
-        mMinSquareY(-1),
-        mSquaresPerChunk(0)
+        mMinSquareY(-1)
     {
 
     }

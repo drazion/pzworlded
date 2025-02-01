@@ -59,7 +59,18 @@ struct TilePlusLayer
 
     }
 
-    TilePlusLayer(const TilePlusLayer& rhs)
+    TilePlusLayer(const TilePlusLayer& rhs) noexcept
+        : mSubMap(rhs.mSubMap)
+        , mHideIfVisible(rhs.mHideIfVisible)
+        , mLayerName(rhs.mLayerName)
+        , mTile(rhs.mTile)
+        , mVisible(rhs.mVisible)
+        , mOpacity(rhs.mOpacity)
+    {
+
+    }
+
+    TilePlusLayer(const TilePlusLayer&& rhs) noexcept
         : mSubMap(rhs.mSubMap)
         , mHideIfVisible(rhs.mHideIfVisible)
         , mLayerName(rhs.mLayerName)
@@ -79,6 +90,17 @@ struct TilePlusLayer
         , mOpacity(opacity)
     {
 
+    }
+
+    TilePlusLayer& operator=(const TilePlusLayer& other) noexcept
+    {
+        mSubMap = other.mSubMap;
+        mHideIfVisible = other.mHideIfVisible;
+        mLayerName = other.mLayerName;
+        mTile = other.mTile;
+        mVisible = other.mVisible;
+        mOpacity = other.mOpacity;
+        return *this;
     }
 
     MapComposite *mSubMap; // This tile belongs to a Lot

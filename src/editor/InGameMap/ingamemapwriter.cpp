@@ -90,7 +90,7 @@ public:
         w.writeAttribute(QLatin1String("x"), QString::number(worldOrigin.x() + cell->x()));
         w.writeAttribute(QLatin1String("y"), QString::number(worldOrigin.y() + cell->y()));
 
-        for (auto* feature : qAsConst(cell->inGameMap().mFeatures)) {
+        for (auto* feature : std::as_const(cell->inGameMap().mFeatures)) {
             writeFeature(w, feature);
         }
 

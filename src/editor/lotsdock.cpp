@@ -565,13 +565,11 @@ bool LotsModel::dropMimeData(const QMimeData *data,
      QByteArray encodedData = data->data(LotsModelMimeType);
      QDataStream stream(&encodedData, QIODevice::ReadOnly);
      QList<WorldCellLot*> lots;
-     int rows = 0;
 
      while (!stream.atEnd()) {
          QString text;
          stream >> text;
          lots << mCell->lots().at(text.toInt());
-         ++rows;
      }
 
      // Note: parentItem may be destroyed by setCell()
@@ -591,7 +589,7 @@ bool LotsModel::dropMimeData(const QMimeData *data,
      }
 
      worldDoc->undoStack()->beginMacro(tr("Reorder %1 Lots").arg(lots.size()));
-     for (WorldCellLot *lot : lots) {
+     for (WorldCellLot *lot : std::as_const(lots)) {
          worldDoc->reorderCellLot(lot, insertBefore);
          insertBefore = lot;
          worldDoc->setLotLevel(lot, level);

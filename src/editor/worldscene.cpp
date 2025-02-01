@@ -253,9 +253,11 @@ void WorldScene::setTool(AbstractTool *tool)
         mActiveTool->activate();
     }
 
-    if (mActiveTool != WorldEditRoadTool::instance())
-        foreach (WorldRoadItem *item, mRoadItems)
+    if (mActiveTool != WorldEditRoadTool::instance()) {
+        for (WorldRoadItem *item : std::as_const(mRoadItems)) {
             item->setEditable(false);
+        }
+    }
 
     bool bmpToolActive = mActiveTool == WorldBMPTool::instance();
     if (bmpToolActive != mBMPToolActive) {
@@ -620,6 +622,8 @@ void WorldScene::zombieSpawnImageOpacityChanged(qreal opacity)
 
 void WorldScene::setShowZonesInWorldView(bool show)
 {
+    Q_UNUSED(show)
+
     setShowBMPs(Preferences::instance()->showBMPs());
     // update() to redisplay WorldCells also.
     update();

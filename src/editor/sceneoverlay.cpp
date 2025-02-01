@@ -77,6 +77,8 @@ QRectF LightSwitchOverlay::boundingRect() const
 
 void LightSwitchOverlay::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget)
 {
+    Q_UNUSED(option)
+    Q_UNUSED(widget)
 //    mCellScene->renderer()->drawFancyRectangle(painter, QRect(mX, mY, 1, 1), Qt::lightGray, mZ);
     if (option->state & QStyle::State_MouseOver) {
         QPainterPath path;
@@ -411,6 +413,9 @@ static void resolveProperties(PropertyHolder *ph, PropertyList &result)
 
 void WaterFlowOverlay::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget)
 {
+    Q_UNUSED(option)
+    Q_UNUSED(widget)
+
     ObjectType* objectType = mCellScene->world()->objectType(QStringLiteral("WaterFlow"));
     if (objectType == nullptr)
         return;

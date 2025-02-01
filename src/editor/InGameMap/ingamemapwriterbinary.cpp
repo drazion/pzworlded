@@ -229,7 +229,7 @@ public:
         for (int y = 0; y < world->height(); y++) {
             for (int x = 0; x < world->width(); x++) {
                 WorldCell *cell = world->cellAt(x, y);
-                for (auto* feature : qAsConst(cell->inGameMap().mFeatures)) {
+                for (auto* feature : std::as_const(cell->inGameMap().mFeatures)) {
                     addString(feature->mGeometry.mType);
                     for (auto& property : feature->mProperties) {
                         addString(property.mKey);
@@ -240,7 +240,7 @@ public:
         }
 
         w << qint32(strings.size());
-        for (const QString &str : qAsConst(strings)) {
+        for (const QString &str : std::as_const(strings)) {
             SaveString(w, str);
         }
     }
@@ -258,7 +258,7 @@ public:
 
         w << qint32(cell->inGameMap().mFeatures.size());
 
-        for (auto* feature : qAsConst(cell->inGameMap().mFeatures)) {
+        for (auto* feature : std::as_const(cell->inGameMap().mFeatures)) {
             writeFeature(w, feature);
         }
     }

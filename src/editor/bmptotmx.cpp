@@ -471,6 +471,7 @@ QImage BMPToTMX::loadImage(const QString &path, const QString &suffix,
         return QImage();
     }
 
+    Q_UNUSED(format)
 #if 0
     // This is the fastest format for QImage::pixel() and QImage::setPixel().
     if (image.format() != format) {

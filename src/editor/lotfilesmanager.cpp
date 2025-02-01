@@ -347,7 +347,7 @@ bool LotFilesManager::generateCell(WorldCell *cell)
             for (int x = d; x < mapWidth; x++) {
                 cells.resize(0);
                 lg->orderedCellsAt2(QPoint(x, y), cells);
-                for (const Tiled::Cell *cell : qAsConst(cells)) {
+                for (const Tiled::Cell *cell : std::as_const(cells)) {
                     if (cell->tile == missingTile) continue;
                     int lx = x, ly = y;
                     if (mapInfo->orientation() == Map::Isometric) {
@@ -604,6 +604,7 @@ bool LotFilesManager::generateHeaderAux(WorldCell *cell, MapComposite *mapCompos
             tilecount++;
             if (tile->name.startsWith(QLatin1String("jumbo_tree_01"))) {
                 int nnn = 0;
+                (void)nnn;
             }
         }
     }
@@ -811,6 +812,8 @@ void LotFilesManager::generateBuildingObjects(int mapWidth, int mapHeight,
 
 void LotFilesManager::generateJumboTrees(WorldCell *cell, MapComposite *mapComposite)
 {
+    Q_UNUSED(mapComposite)
+
     const quint8 JUMBO_ZONE = 1;
     const quint8 PREVENT_JUMBO = 2;
     const quint8 REMOVE_TREE = 3;
@@ -845,7 +848,7 @@ void LotFilesManager::generateJumboTrees(WorldCell *cell, MapComposite *mapCompo
     }
 
     QHash<ObjectType*,const JumboZone*> objectTypeMap;
-    for (const JumboZone* jumboZone : qAsConst(mJumboZoneList)) {
+    for (const JumboZone* jumboZone : std::as_const(mJumboZoneList)) {
         if (ObjectType *objectType = cell->world()->objectType(jumboZone->zoneName)) {
             objectTypeMap[objectType] = jumboZone;
         }

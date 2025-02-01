@@ -545,7 +545,7 @@ void TilesetManager::waitForTilesets(const QList<Tileset *> &tilesets, QWidget *
 
     while (true) {
         bool busy = false;
-        for (TilesetImageReaderWorker *worker : qAsConst(mImageReaderWorkers)) {
+        for (TilesetImageReaderWorker *worker : std::as_const(mImageReaderWorkers)) {
             if (worker->busy()) {
                 busy = true;
                 break;

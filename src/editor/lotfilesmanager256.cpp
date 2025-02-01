@@ -950,7 +950,7 @@ bool LotFilesWorker256::generateCell()
             for (int x = d; x < mapWidth; x++) {
                 cells.resize(0);
                 lg->orderedCellsAt2(QPoint(x, y), cells);
-                for (const Tiled::Cell *cell : qAsConst(cells)) {
+                for (const Tiled::Cell *cell : std::as_const(cells)) {
                     if (cell->tile == missingTile) continue;
                     int lx = x, ly = y;
                     if (mapInfo->orientation() == Map::Isometric) {
@@ -1265,6 +1265,7 @@ bool LotFilesWorker256::generateHeaderAux(int cell256X, int cell256Y)
             usedTiles += tile;
             if (tile->name.startsWith(QLatin1String("jumbo_tree_01"))) {
                 int nnn = 0;
+                (void) nnn;
             }
         }
     }
@@ -1511,7 +1512,7 @@ void LotFilesWorker256::generateJumboTrees(CombinedCellMaps& combinedMaps)
     }
 
     QHash<ObjectType*,const JumboZone*> objectTypeMap;
-    for (const JumboZone* jumboZone : qAsConst(mManager->mJumboZoneList)) {
+    for (const JumboZone* jumboZone : std::as_const(mManager->mJumboZoneList)) {
         if (ObjectType *objectType = mWorldDoc->world()->objectType(jumboZone->zoneName)) {
             objectTypeMap[objectType] = jumboZone;
         }
