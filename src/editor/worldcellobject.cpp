@@ -19,6 +19,8 @@
 
 #include "world.h"
 
+#include <limits>
+
 WorldCellObject::WorldCellObject(WorldCell *cell, const QString &name, ObjectType *type,
                                  WorldObjectGroup *group, qreal x, qreal y,
                                  int level, qreal width, qreal height)
