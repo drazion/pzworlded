@@ -108,6 +108,12 @@ public:
     {
 
     }
+    Square(const Square &other)
+    {
+        qDeleteAll(Entries);
+        Entries = other.Entries;
+        roomID = other.roomID;
+    }
     ~Square()
     {
         qDeleteAll(Entries);
