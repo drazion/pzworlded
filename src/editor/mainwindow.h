@@ -156,6 +156,7 @@ public slots:
     void writeInGameMapFeaturesXML_256();
     void overwriteInGameMapFeaturesXML_300();
     void overwriteInGameMapFeaturesXML_256();
+    void createInGameMapFeatureImage();
     void createInGameMapImage();
     void createInGameMapImagePyramid();
 

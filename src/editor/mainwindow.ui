@@ -402,6 +402,7 @@
     <addaction name="actionWriteInGameMapFeaturesXML_256"/>
     <addaction name="actionOverwriteInGameMapFeaturesXML"/>
     <addaction name="actionOverwriteInGameMapFeaturesXML_256"/>
+    <addaction name="actionCreateFeatureImage"/>
     <addaction name="actionCreateWorldImage"/>
     <addaction name="actionCreateImagePyramid"/>
    </widget>
@@ -1068,6 +1069,11 @@
    </property>
    <property name="toolTip">
     <string>Selected Cells</string>
+   </property>
+  </action>
+  <action name="actionCreateFeatureImage">
+   <property name="text">
+    <string>Create Feature Image...</string>
    </property>
   </action>
  </widget>

@@ -53,6 +53,8 @@ struct pzPolygon
     ClipperLib::Path outer;
     ClipperLib::Paths inner; // holes
 };
+
+int PIXELS_PER_CELL = 48;
 }
 
 InGameMapFeatureGenerator::InGameMapFeatureGenerator(QObject *parent) :
@@ -82,11 +84,12 @@ bool InGameMapFeatureGenerator::generateWorld(WorldDocument *worldDoc, InGameMap
     mWorldDoc->undoStack()->beginMacro(QStringLiteral("Generate InGameMap %1 Features").arg(typeStr));
 
     if (mode == GenerateSelected) {
-        for (WorldCell *cell : worldDoc->selectedCells())
+        for (WorldCell *cell : worldDoc->selectedCells()) {
             if (!generateCell(cell)) {
                 mWorldDoc->undoStack()->endMacro();
                 goto errorExit;
             }
+        }
     } else {
         for (int y = 0; y < world->height(); y++) {
             for (int x = 0; x < world->width(); x++) {

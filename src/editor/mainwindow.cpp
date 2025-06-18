@@ -325,6 +325,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->actionWriteInGameMapFeaturesXML_256, &QAction::triggered, this, &MainWindow::writeInGameMapFeaturesXML_256);
     connect(ui->actionOverwriteInGameMapFeaturesXML, &QAction::triggered, this, &MainWindow::overwriteInGameMapFeaturesXML);
     connect(ui->actionOverwriteInGameMapFeaturesXML_256, &QAction::triggered, this, &MainWindow::overwriteInGameMapFeaturesXML_256);
+    connect(ui->actionCreateFeatureImage, &QAction::triggered, this, &MainWindow::createInGameMapFeatureImage);
     connect(ui->actionCreateWorldImage, &QAction::triggered, this, &MainWindow::createInGameMapImage);
     connect(ui->actionCreateImagePyramid, &QAction::triggered, this, &MainWindow::createInGameMapImagePyramid);
 
@@ -2478,6 +2479,92 @@ void MainWindow::overwriteInGameMapFeaturesXML_256()
     overwriteInGameMapFeaturesXML(true);
 }
 
+void MainWindow::createInGameMapFeatureImage()
+{
+    WorldDocument *worldDoc = currentWorldDocument();
+    QString suggestedFileName;
+    if (suggestedFileName.isEmpty() || !QFileInfo::exists(suggestedFileName)) {
+        if (worldDoc->fileName().isEmpty()) {
+            suggestedFileName = QDir::currentPath();
+            suggestedFileName += QLatin1String("/forest.png");
+        } else {
+            const QFileInfo fileInfo(worldDoc->fileName());
+            suggestedFileName = fileInfo.path();
+            suggestedFileName += QLatin1String("/forest.png");
+        }
+    }
+    const QString fileName = QFileDialog::getSaveFileName(this, QString(), suggestedFileName, tr("PNG files (*.png)"));
+    if (fileName.isEmpty()) {
+        return;
+    }
+    World* world = worldDoc->world();
+    QSize size(world->size() * 300);
+    QImage image(size.width(), size.height(), QImage::Format_ARGB32);
+    image.fill(Qt::transparent);
+    QPainter painter(&image);
+    QBrush brush(Qt::white);
+
+    QPolygonF mPolygon;
+    QVector<QPolygonF> mHoles;
+    for (int cellY = 0; cellY < world->height(); cellY++) {
+        for (int cellX = 0; cellX < world->width(); cellX++) {
+            WorldCell *cell = world->cellAt(cellX, cellY);
+            if (cell == nullptr) {
+                continue;
+            }
+            for (InGameMapFeature* feature : cell->inGameMap().features()) {
+                if (!feature->mProperties.contains(QStringLiteral("natural"), QStringLiteral("forest"))) {
+                    continue;
+                }
+                if (!feature->mGeometry.isPolygon() || feature->mGeometry.mCoordinates.isEmpty()) {
+                    continue;
+                }
+
+                mPolygon.clear();
+                mHoles.clear();
+                const InGameMapCoordinates& outer = feature->mGeometry.mCoordinates.first();
+                for (auto& point : outer) {
+                    mPolygon += QPointF(point.x, point.y);
+                }
+                bool bClockwise = outer.isClockwise();
+                for (int i = 1; i < feature->mGeometry.mCoordinates.size(); i++) {
+                    const auto& inner = feature->mGeometry.mCoordinates[i];
+                    QPolygonF hole;
+                    if (bClockwise == inner.isClockwise()) {
+                        for (int j = inner.size() - 1; j >= 0; j--) {
+                            auto& point = inner[j];
+                            hole += QPointF(point.x, point.y);
+                        }
+                    } else {
+                        for (auto& point : inner) {
+                            hole += QPointF(point.x, point.y);
+                        }
+                    }
+                    mHoles += hole;
+                }
+
+                QPainterPath path;
+                if (!mPolygon.isClosed()) {
+                    mPolygon += mPolygon.first();
+                }
+                path.addPolygon(mPolygon);
+                QPainterPath path2;
+                for (auto& hole : mHoles) {
+                    if (hole.isClosed() == false) {
+                        hole += hole.first();
+                    }
+                    path2.addPolygon(hole);
+                }
+                path = path.subtracted(path2);
+                path.translate(cellX * 300, cellY * 300);
+                painter.fillPath(path, brush);
+            }
+        }
+    }
+    painter.end();
+    image.save(fileName);
+}
+
 void MainWindow::writeInGameMapFeaturesXML(bool b256)
 {
     WorldDocument *worldDoc = currentWorldDocument();
@@ -2779,6 +2866,7 @@ void MainWindow::updateActions()
     ui->actionOverwriteInGameMapFeaturesXML->setEnabled(hasDoc && hasReadFeaturesXML && bEnable10x10);
     ui->actionOverwriteInGameMapFeaturesXML_256->setText(tr("Overwrite %1 8x8").arg(featuresXML.isEmpty() ? tr("features.xml") : QFileInfo(featuresXML).fileName()));
     ui->actionOverwriteInGameMapFeaturesXML_256->setEnabled(hasDoc && hasReadFeaturesXML);
+    ui->actionCreateFeatureImage->setEnabled(hasDoc);
     ui->actionCreateWorldImage->setEnabled(hasDoc);
 
     ui->actionSnapToGrid->setEnabled(cellDoc != 0);

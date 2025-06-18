@@ -27,6 +27,7 @@
 #include <quazipfile.h>
 
 #include <QFileDialog>
+#include <QPainter>
 
 #include <cmath>
 
@@ -101,12 +102,19 @@ void InGameMapImagePyramidWindow::createZip()
         return;
     }
 
+    QSize size(std::ceilf(image.width() / 16.0f) * 16, std::ceilf(image.height() / 16.0f) * 16);
+    QImage image1(size, image.format());
+    image1.fill(Qt::transparent);
+    QPainter painter(&image1);
+    painter.drawImage(QPoint(), image);
+    painter.end();
+
     int tileSize = 256;
     int levels = 5;
     for (int level = 0; level < levels; level++) {
-        float width = float(image.width()) / (1 << level);
-        float height = float(image.height()) / (1 << level);
-        QImage scaledImage = image.scaled(width, height, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+        float width = float(image1.width()) / (1 << level);
+        float height = float(image1.height()) / (1 << level);
+        QImage scaledImage = image1.scaled(width, height, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
         int columns = std::ceil(width / tileSize);
         int rows = std::ceil(height / tileSize);
         log(QStringLiteral("Creating images for level %1. width x height = %2 x %3").arg(level).arg(columns).arg(rows));
