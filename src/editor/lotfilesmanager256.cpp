@@ -1182,6 +1182,10 @@ bool LotFilesWorker256::generateHeader(CombinedCellMaps& combinedMaps, MapCompos
                 continue;
             if (r->building == comp->building)
                 continue;
+            if ((r->floor < 0) != (comp->floor < 0)) {
+                // Don't merge below-ground buildings with above-ground buildings.
+                continue;
+            }
             if (r->inSameBuilding(comp)) {
                 if (comp->building != nullptr) {
                     LotFile::Building *b = comp->building;
