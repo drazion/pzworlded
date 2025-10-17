@@ -27,6 +27,7 @@ class QFileSystemModel;
 class QLabel;
 class QLineEdit;
 class QModelIndex;
+class QToolButton;
 class QTreeView;
 
 class MapsView;
@@ -39,6 +40,10 @@ public:
     MapsDock(QWidget *parent = 0);
 
 private slots:
+    void findTextEdited(const QString& text);
+    void findPrev();
+    void findNext();
+    void updateFindButtons();
     void browse();
     void editedMapsDirectory();
     void onMapsDirectoryChanged();
@@ -52,6 +57,9 @@ protected:
 private:
     void retranslateUi();
 
+    QLineEdit *mFilterEdit;
+    QToolButton *mFindPrev;
+    QToolButton *mFindNext;
     QLabel *mPreviewLabel;
     MapImage *mPreviewMapImage;
     QLineEdit *mDirectoryEdit;
