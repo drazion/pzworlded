@@ -30,6 +30,7 @@ class DocumentManager;
 class LayersDock;
 class LotsDock;
 class LotPackWindow;
+class LuaTable;
 class MapsDock;
 class InGameMapDock;
 class ObjectsDock;
@@ -44,6 +45,10 @@ class Zoomable;
 
 class QComboBox;
 class QMenu;
+
+namespace Lua {
+class LuaTable;
+}
 
 class MainWindow : public QMainWindow
 {
@@ -99,6 +104,7 @@ public slots:
 
     void WriteSpawnPoints();
     void WriteWorldObjects();
+    void ReadWorldObjects();
     void WriteRoomTones();
 
     void updateWindowTitle();
@@ -217,6 +223,8 @@ private:
         mViewHint.scrollY = scrollY;
         mViewHint.valid = true;
     }
+
+    void addWorldObjectsFromLuaTable(Lua::LuaTable *table);
 
 private:
     Ui::MainWindow *ui;

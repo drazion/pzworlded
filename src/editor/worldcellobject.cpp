@@ -82,18 +82,9 @@ bool WorldCellObject::isSpawnPoint() const
 
 void WorldCellObject::calculateBounds()
 {
-    int minX = std::numeric_limits<int>::max();
-    int minY = std::numeric_limits<int>::max();
-    int maxX = std::numeric_limits<int>::min();
-    int maxY = std::numeric_limits<int>::min();
-    for (const auto& point : std::as_const(mPoints)) {
-        minX = std::min(minX, point.x);
-        minY = std::min(minY, point.y);
-        maxX = std::max(maxX, point.x);
-        maxY = std::max(maxY, point.y);
-    }
-    mX = minX;
-    mY = minY;
-    mWidth = maxX - minX + 1;
-    mHeight = maxY - minY + 1;
+    QRect bounds = mPoints.calculateBounds();
+    mX = bounds.x();
+    mY = bounds.y();
+    mWidth = bounds.width();
+    mHeight = bounds.height();
 }

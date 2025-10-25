@@ -64,6 +64,7 @@ SOURCES += main.cpp\
     generatelotsfailuredialog.cpp \
     loadthumbnailsdialog.cpp \
     lotfilesmanager256.cpp \
+    luatable.cpp \
         mainwindow.cpp \
     InGameMap/clipper.cpp \
     InGameMap/ingamemapcell.cpp \
@@ -195,6 +196,7 @@ HEADERS  += mainwindow.h \
     InGameMap/ingamemapwriterbinary.h \
     loadthumbnailsdialog.h \
     lotfilesmanager256.h \
+    luatable.h \
     navigation/chunkdatafile256.h \
     navigation/isochunk256.h \
     navigation/isogridsquare256.h \

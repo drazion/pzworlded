@@ -275,6 +275,7 @@ MainWindow::MainWindow(QWidget *parent)
             this, &MainWindow::TMXToBMPSelected);
     connect(ui->actionLUAObjectDump, &QAction::triggered, this, &MainWindow::WriteSpawnPoints);
     connect(ui->actionWriteObjects, &QAction::triggered, this, &MainWindow::WriteWorldObjects);
+    connect(ui->actionReadObjectsFromLua, &QAction::triggered, this, &MainWindow::ReadWorldObjects);
     connect(ui->actionWriteRoomTonesToLua, &QAction::triggered, this, &MainWindow::WriteRoomTones);
     connect(ui->actionFromToAll, &QAction::triggered,
             this, &MainWindow::FromToAll);
@@ -1450,6 +1451,217 @@ void MainWindow::WriteWorldObjects()
 
     WriteWorldObjectsDialog d(worldDoc, this);
     d.exec();
+}
+
+extern "C" {
+#include "lualib.h"
+#include "lauxlib.h"
+
+int traceback(lua_State *L) {
+  const char *msg = lua_tostring(L, 1);
+  if (msg) {
+    luaL_traceback(L, L, msg, 1);
+  } else if (!lua_isnoneornil(L, 1)) {  /* is there an error object? */
+    if (!luaL_callmeta(L, 1, "__tostring"))  /* try its 'tostring' metamethod */
+      lua_pushliteral(L, "(no error message)");
+  }
+  return 1;
+}
+
+} // extern "C"
+
+#include "luatable.h"
+
+namespace Lua {
+const char *cstring(const QString &qstring);
+} // namespace Lua
+
+const char *Lua::cstring(const QString &qstring)
+{
+    static QHash<QString,const char*> StringHash;
+    if (!StringHash.contains(qstring)) {
+        QByteArray b = qstring.toLatin1();
+        char *s = new char[b.size() + 1];
+        memcpy(s, (void*)b.data(), b.size() + 1);
+        StringHash[qstring] = s;
+    }
+    return StringHash[qstring];
+}
+
+void MainWindow::ReadWorldObjects()
+{
+    QString filter = tr("Lua files (*.lua)");
+    QString fileName = QFileDialog::getOpenFileName(this, tr("Open Building"), QString(), filter);
+    if (fileName.isEmpty()) {
+        return;
+    }
+
+    lua_State *L = luaL_newstate();
+    luaL_openlibs(L);
+
+    int status = luaL_loadfile(L, Lua::cstring(fileName));
+    if (status == LUA_OK) {
+        int base = lua_gettop(L);
+        lua_pushcfunction(L, traceback);
+        lua_insert(L, base);
+        status = lua_pcall(L, 0, 0, base);
+        lua_remove(L, base);
+    }
+
+    if (status != LUA_OK) {
+        QString output = QString::fromLatin1(lua_tostring(L, -1));
+        lua_pop(L, -1); // pop error
+        QMessageBox::warning(this, QStringLiteral("Read Objects from Lua"), output);
+    }
+
+    if (status == LUA_OK) {
+        // regions = { 1={ name="", type="", ... }, 2={ name="", type="", ... }, 3={ name="", type="", ... } }
+        lua_getglobal(L, "regions");
+        if (lua_istable(L, -1)) {
+            Lua::LuaTable *table = Lua::parseTable(L);
+            addWorldObjectsFromLuaTable(table);
+            delete table;
+        }
+        lua_pop(L, 1); // Pop "regions" from the stack
+    }
+
+    lua_close(L);
+}
+
+void MainWindow::addWorldObjectsFromLuaTable(Lua::LuaTable *regionsTable)
+{
+    WorldDocument *worldDoc = mCurrentDocument->asWorldDocument();
+    const GenerateLotsSettings &gls = worldDoc->world()->getGenerateLotsSettings();
+    worldDoc->undoStack()->beginMacro(tr("Read Objects from Lua"));
+
+    for (Lua::LuaTableKeyValue *kv : regionsTable->kv) {
+        if (!kv->value.isTable()) {
+            continue;
+        }
+        Lua::LuaTable *objectTable = kv->value.t.data();
+        QString type;
+        if (!objectTable->getString(QStringLiteral("type"), type)) {
+            continue;
+        }
+        if (type.isEmpty()) {
+            continue;
+        }
+        QString name;
+        lua_Number x = 0.0, y = 0.0, z = 0.0, width = 1.0, height = 1.0;
+        if (!objectTable->getString(QStringLiteral("name"), name)) {
+            continue;
+        }
+        ObjectGeometryType geometryType = ObjectGeometryType::INVALID;
+        WorldCellObjectPoints points;
+        QString geometry;
+        if (objectTable->getString(QStringLiteral("geometry"), geometry)) {
+            if (geometry == QLatin1String("point")) {
+                geometryType = ObjectGeometryType::Point;
+            } else if (geometry == QLatin1String("polygon")) {
+                geometryType = ObjectGeometryType::Polygon;
+            } else if (geometry == QLatin1String("polyline")) {
+                geometryType = ObjectGeometryType::Polyline;
+            } else {
+               continue;
+            }
+            if (Lua::LuaTable *pointsTable = objectTable->getTable(QStringLiteral("points"))) {
+                int numPoints = pointsTable->kv.size() / 2;
+                if (numPoints < 1) {
+                    continue;
+                }
+                points.resize(numPoints);
+                for (Lua::LuaTableKeyValue *kv : pointsTable->kv) {
+                    if (!kv->key.isNumber() || !kv->value.isNumber()) {
+                        continue;
+                    }
+                    int k = int(std::roundl(kv->key.n)) - 1;
+                    if (k < 0 || k >= numPoints * 2) {
+                        continue;
+                    }
+                    int v = int(std::roundl(kv->value.n));
+                    WorldCellObjectPoint &p = points[k / 2];
+                    if (k % 2) {
+                        p.y = v;
+                    } else {
+                        p.x = v;
+                    }
+                }
+                if (points.size() < 1) {
+                    continue;
+                }
+                QRect bounds = points.calculateBounds();
+                x = bounds.x();
+                y = bounds.y();
+                width = bounds.width();
+                height = bounds.height();
+                int cellX = x / 300 - gls.worldOrigin.x();
+                int cellY = y / 300 - gls.worldOrigin.y();
+                points.translate(-cellX * 300, -cellY * 300);
+            }
+        } else {
+            if (!objectTable->getNumber(QStringLiteral("x"), x)) {
+                continue;
+            }
+            if (!objectTable->getNumber(QStringLiteral("y"), y)) {
+                continue;
+            }
+            if (!objectTable->getNumber(QStringLiteral("width"), width)) {
+                continue;
+            }
+            if (!objectTable->getNumber(QStringLiteral("height"), height)) {
+                continue;
+            }
+        }
+        if (!objectTable->getNumber(QStringLiteral("z"), z)) {
+            continue;
+        }
+        WorldCell *cell = worldDoc->world()->cellAt(x / 300 - gls.worldOrigin.x(), y / 300 - gls.worldOrigin.y());
+        if (cell == nullptr) {
+            continue;
+        }
+        ObjectType *objectType = worldDoc->world()->objectType(type);
+        if (objectType == nullptr) {
+            continue;
+        }
+        WorldObjectGroup *objectGroup = worldDoc->world()->objectGroups().find(type);
+        if (objectGroup == nullptr) {
+            continue;
+        }
+        WorldCellObject* object = new WorldCellObject(cell, name, objectType, objectGroup,
+                                                      qreal(x - cell->x() * 300), qreal(y - cell->y() * 300), qreal(z),
+                                                      qreal(width), qreal(height));
+        if (geometryType != ObjectGeometryType::INVALID) {
+            object->setGeometryType(geometryType);
+            object->setPoints(points);
+            object->calculateBounds(); // not needed
+        }
+        if (Lua::LuaTable *propertiesTable = objectTable->getTable(QStringLiteral("properties"))) {
+            PropertyList propertyList;
+            for (const Lua::LuaTableKeyValue *kv : propertiesTable->kv) {
+                if (!kv->key.isString()) {
+                    continue;
+                }
+                QString value;
+                if (kv->value.isBoolean()) {
+                    value = kv->value.b ? QStringLiteral("true") : QStringLiteral("false");
+                } else if (kv->value.isNumber()) {
+                    value = QString::number(kv->value.n);
+                } else if (kv->value.isString()) {
+                    value = kv->value.s;
+                } else {
+                    // a table?
+                    continue;
+                }
+                if (PropertyDef *propertyDef = worldDoc->world()->propertyDefinition(kv->key.s)) {
+                    Property *property = new Property(propertyDef, value);
+                    propertyList += property;
+                }
+            }
+            object->setProperties(propertyList);
+        }
+        worldDoc->addCellObject(cell, cell->objects().size(), object);
+    }
+    worldDoc->undoStack()->endMacro();
 }
 
 void MainWindow::WriteRoomTones()
@@ -2802,6 +3014,7 @@ void MainWindow::updateActions()
 
     ui->actionLUAObjectDump->setEnabled(worldDoc != 0);
     ui->actionWriteObjects->setEnabled(worldDoc != 0);
+    ui->actionReadObjectsFromLua->setEnabled(worldDoc != 0);
     ui->actionWriteRoomTonesToLua->setEnabled(worldDoc != 0);
 
     ui->actionCopy->setEnabled(worldDoc);

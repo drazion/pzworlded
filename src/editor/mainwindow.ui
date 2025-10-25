@@ -284,6 +284,7 @@
     <addaction name="menuOverwriteSpawnMap256"/>
     <addaction name="actionLUAObjectDump"/>
     <addaction name="actionWriteObjects"/>
+    <addaction name="actionReadObjectsFromLua"/>
     <addaction name="actionWriteRoomTonesToLua"/>
     <addaction name="separator"/>
     <addaction name="actionClose"/>
@@ -1074,6 +1075,11 @@
   <action name="actionCreateFeatureImage">
    <property name="text">
     <string>Create Feature Image...</string>
+   </property>
+  </action>
+  <action name="actionReadObjectsFromLua">
+   <property name="text">
+    <string>Read Objects from Lua...</string>
    </property>
   </action>
  </widget>

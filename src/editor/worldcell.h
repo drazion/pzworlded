@@ -221,6 +221,21 @@ public:
 class WorldCellObjectPoints : public QVector<WorldCellObjectPoint>
 {
 public:
+    QRect calculateBounds() const
+    {
+        int minX = std::numeric_limits<int>::max();
+        int minY = std::numeric_limits<int>::max();
+        int maxX = std::numeric_limits<int>::min();
+        int maxY = std::numeric_limits<int>::min();
+        for (const auto& point : *this) {
+            minX = std::min(minX, point.x);
+            minY = std::min(minY, point.y);
+            maxX = std::max(maxX, point.x);
+            maxY = std::max(maxY, point.y);
+        }
+        return QRect(minX, minY, maxX - minX + 1, maxY - minY + 1);
+    }
+
     void translate(int dx, int dy)
     {
         for (auto &point : *this) {

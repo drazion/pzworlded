@@ -577,4 +577,40 @@ objectgroup
     defaulttype = WorldGen
 }
 
+objecttype
+{
+    name = BuildingName
+}
+
+objectgroup
+{
+    name = BuildingName
+    color = #EA3680
+    defaulttype = BuildingName
+}
+
+objecttype
+{
+    name = NoGas
+}
+
+objectgroup
+{
+    name = NoGas
+    color = #F08650
+    defaulttype = NoGas
+}
+
+objecttype
+{
+    name = Region
+}
+
+objectgroup
+{
+    name = Region
+    color = #75163F
+    defaulttype = Region
+}
+
 
