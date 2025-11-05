@@ -4543,6 +4543,7 @@ CellScene::CellScene(QObject *parent)
     connect(prefs, &Preferences::gridColorChanged, this, [this]{this->update();});
     connect(prefs, &Preferences::showObjectsChanged, this, &CellScene::showObjectsChanged);
     connect(prefs, &Preferences::showObjectNamesChanged, this, &CellScene::showObjectNamesChanged);
+    connect(prefs, &Preferences::showLotFloorsOnlyChanged, this, &CellScene::showLotFloorsOnlyChanged);
     connect(prefs, &Preferences::showInvisibleTilesChanged, this, &CellScene::showInvisibleTilesChanged);
 
     mHighlightCurrentLevel = prefs->highlightCurrentLevel();
@@ -5125,6 +5126,7 @@ void CellScene::loadMap()
     mRenderer->setMinLevel(mMapComposite->minLevel());
     mRenderer->setMaxLevel(mMapComposite->maxLevel());
     mRenderer->setShowInvisibleTiles(Preferences::instance()->showInvisibleTiles());
+    mMapComposite->setShowLotFloorsOnly(Preferences::instance()->showLotFloorsOnly());
     connect(mMapComposite, &MapComposite::layerGroupAdded,
             this, &CellScene::layerGroupAdded);
     connect(mMapComposite, &MapComposite::layerGroupAdded,
@@ -5716,6 +5718,16 @@ void CellScene::showObjectNamesChanged(bool show)
     Q_UNUSED(show)
     foreach (ObjectItem *item, mObjectItems)
         item->synchWithObject(); // just synch the label
+}
+
+void CellScene::showLotFloorsOnlyChanged(bool show)
+{
+    mapComposite()->setShowLotFloorsOnly(show);
+    for (CompositeLayerGroup *layerGroup : mapComposite()->layerGroups()) {
+        layerGroup->setNeedsSynch(true);
+    }
+    mapComposite()->synch(); // force VBO update
+    update();
 }
 
 void CellScene::showInvisibleTilesChanged(bool show)

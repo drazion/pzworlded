@@ -529,6 +529,12 @@ bool CompositeLayerGroup::orderedCellsAt3(const QPoint &pos, QVector<TilePlusLay
             }
 #endif // ROAD_CRUD
             const Cell *cell = &tl->cellAt(subPos);
+            if (mOwner->parent() != nullptr && mOwner->parent()->showLotFloorsOnly()) {
+                bool isFloor = !mLevel && !index && (tl->name() == sFloor);
+                if (!isFloor && !tl->name().contains(sAboveLot)) {
+                    continue;
+                }
+            }
             if (tlBmpBlend && tlBmpBlend->contains(subPos) && !tlBmpBlend->cellAt(subPos).isEmpty()) {
                 if (!noBlend || !noBlend->get(subPos)) {
                     cell = &tlBmpBlend->cellAt(subPos);

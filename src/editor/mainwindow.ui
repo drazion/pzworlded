@@ -316,6 +316,7 @@
     <addaction name="actionShowCoordinates"/>
     <addaction name="actionShowGrid"/>
     <addaction name="actionShowInvisibleTiles"/>
+    <addaction name="actionShowLotFloorsOnly"/>
     <addaction name="actionShowMiniMap"/>
     <addaction name="actionShowObjects"/>
     <addaction name="actionShowObjectNames"/>
@@ -1080,6 +1081,17 @@
   <action name="actionReadObjectsFromLua">
    <property name="text">
     <string>Read Objects from Lua...</string>
+   </property>
+  </action>
+  <action name="actionShowLotFloorsOnly">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Show Lot Floors Only</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+L</string>
    </property>
   </action>
  </widget>

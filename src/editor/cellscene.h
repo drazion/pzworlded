@@ -911,6 +911,7 @@ public slots:
     void gridColorChanged(const QColor &gridColor);
     void showObjectsChanged(bool show);
     void showObjectNamesChanged(bool show);
+    void showLotFloorsOnlyChanged(bool show);
     void showInvisibleTilesChanged(bool show);
     void setHighlightCurrentLevel(bool highlight);
     void highlightRoomUnderPointerChanged(bool highlight);

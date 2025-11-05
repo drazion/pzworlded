@@ -173,6 +173,7 @@ MainWindow::MainWindow(QWidget *parent)
     ui->actionShowZonesInWorldView->setChecked(prefs->showZonesInWorldView());
     ui->actionHighlightCurrentLevel->setChecked(prefs->highlightCurrentLevel());
     ui->actionHighlightRoomUnderPointer->setChecked(prefs->highlightRoomUnderPointer());
+    ui->actionShowLotFloorsOnly->setChecked(prefs->showLotFloorsOnly());
 
     // Make sure Ctrl+= also works for zooming in
     QList<QKeySequence> keys = QKeySequence::keyBindings(QKeySequence::ZoomIn);
@@ -343,6 +344,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->actionShowZonesInWorldView, &QAction::toggled, prefs, &Preferences::setShowZonesInWorldView);
     connect(ui->actionHighlightCurrentLevel, &QAction::toggled, prefs, &Preferences::setHighlightCurrentLevel);
     connect(ui->actionHighlightRoomUnderPointer, &QAction::toggled, prefs, &Preferences::setHighlightRoomUnderPointer);
+    connect(ui->actionShowLotFloorsOnly, &QAction::toggled, prefs, &Preferences::setShowLotFloorsOnly);
     connect(ui->actionLevelAbove, &QAction::triggered, this, &MainWindow::selectLevelAbove);
     connect(ui->actionLevelBelow, &QAction::triggered, this, &MainWindow::selectLevelBelow);
     connect(ui->actionZoomIn, &QAction::triggered, this, &MainWindow::zoomIn);
