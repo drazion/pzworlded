@@ -17,9 +17,10 @@
 
 #include "preferences.h"
 
-#include <QCoreApplication>
+#include <QApplication>
 #include <QDir>
 #include <QSettings>
+#include <QTextStream>
 
 Preferences *Preferences::mInstance = 0;
 
@@ -107,6 +108,7 @@ Preferences::Preferences()
     mWorldThumbnails = mSettings->value(QLatin1String("WorldThumbnails"), false).toBool();
     mShowAdjacentMaps = mSettings->value(QLatin1String("ShowAdjacentMaps"), true).toBool();
     mShowInvisibleTiles = mSettings->value(QLatin1String("ShowInvisibleTiles"), true).toBool();
+    mTheme = mSettings->value(QLatin1String("Theme"), QLatin1String("Default")).toString();
     mSettings->endGroup();
 
     mSettings->beginGroup(QLatin1String("MapsDirectory"));
@@ -522,4 +524,39 @@ void Preferences::setShowInvisibleTiles(bool show)
     mSettings->setValue(QLatin1String("Interface/ShowInvisibleTiles"), mShowInvisibleTiles);
 
     emit showInvisibleTilesChanged(mShowInvisibleTiles);
+}
+
+void Preferences::setTheme(const QString &theme)
+{
+    if (mTheme == theme) {
+        return;
+    }
+    mTheme = theme;
+    applyTheme();
+}
+
+void Preferences::applyTheme() const
+{
+    mSettings->setValue(QLatin1String("Interface/Theme"), mTheme);
+    if (mTheme == QStringLiteral("Default")) {
+        qApp->setStyleSheet(QString());
+        return;
+    }
+    QString resource;
+    if (mTheme == QStringLiteral("Breeze (Dark)")) {
+        resource = QStringLiteral(":breeze/dark/stylesheet.qss");
+    } else if (mTheme == QStringLiteral("QDarkStyle (Dark)")) {
+        resource = QStringLiteral(":qdarkstyle/dark/darkstyle.qss");
+    } else if (mTheme == QStringLiteral("QDarkStyle (Light)")) {
+        resource = QStringLiteral(":qdarkstyle/light/lightstyle.qss");
+    } else {
+        return;
+    }
+    QFile theme_file(resource);
+    theme_file.open(QFile::ReadOnly | QFile::Text);
+    if(theme_file.isOpen()) {
+        QTextStream ts(&theme_file);
+        qApp->setStyleSheet(ts.readAll());        //set the theme here!
+        theme_file.close();
+    }
 }

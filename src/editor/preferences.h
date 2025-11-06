@@ -98,6 +98,9 @@ public:
 
     bool showInvisibleTiles() const { return mShowInvisibleTiles; }
 
+    QString theme() const { return mTheme; }
+    void applyTheme() const;
+
 signals:
     void snapToGridChanged(bool snapToGrid);
     void showCellBorderChanged(bool showGrid);
@@ -150,6 +153,7 @@ public slots:
     void setShowLotFloorsOnly(bool show);
     void setShowOtherWorlds(bool show);
     void setShowInvisibleTiles(bool show);
+    void setTheme(const QString &theme);
 
 private:
     Preferences();
@@ -186,6 +190,7 @@ private:
     bool mShowOtherWorlds;
     QString mThumbnailsDirectory;
     bool mShowInvisibleTiles;
+    QString mTheme;
 
     static Preferences *mInstance;
 };

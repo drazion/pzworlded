@@ -58,6 +58,8 @@ int main(int argc, char *argv[])
     QImageReader::setAllocationLimit(0);
 #endif
 
+    Preferences::instance()->applyTheme();
+
     MainWindow w;
     w.show();
 

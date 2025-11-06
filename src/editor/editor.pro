@@ -334,7 +334,10 @@ FORMS    += mainwindow.ui \
 OTHER_FILES +=
 
 RESOURCES += \
-    editor.qrc
+    editor.qrc \
+    qdarkstyle/dark/darkstyle.qrc \
+    qdarkstyle/light/lightstyle.qrc \
+    breeze/breeze.qrc
 
 win32 {
     RC_FILE = worlded.rc

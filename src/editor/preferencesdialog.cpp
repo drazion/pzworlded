@@ -33,6 +33,8 @@ PreferencesDialog::PreferencesDialog(WorldDocument *worldDoc, QWidget *parent)
 
     Preferences *prefs = Preferences::instance();
 
+    connect(ui->themeCombo, qOverload<int>(&QComboBox::currentIndexChanged), this, &PreferencesDialog::themeChanged);
+
     mTilesDirectory = prefs->tilesDirectory();
     ui->tilesDirectory->setText(QDir::toNativeSeparators(mTilesDirectory));
     connect(ui->browseTilesDirectory, &QAbstractButton::clicked,
@@ -50,6 +52,8 @@ PreferencesDialog::PreferencesDialog(WorldDocument *worldDoc, QWidget *parent)
     ui->thumbnails->setChecked(prefs->worldThumbnails());
     ui->showAdjacent->setChecked(prefs->showAdjacentMaps());
     ui->zombieSpawnImageOpacity->setValue(int(prefs->zombieSpawnImageOpacity() * 100));
+
+    ui->themeCombo->setCurrentText(Preferences::instance()->theme());
 }
 
 void PreferencesDialog::browseTilesDirectory()
@@ -60,6 +64,12 @@ void PreferencesDialog::browseTilesDirectory()
         mTilesDirectory = f;
         ui->tilesDirectory->setText(QDir::toNativeSeparators(f));
     }
+}
+
+void PreferencesDialog::themeChanged(int index)
+{
+    QString text = ui->themeCombo->currentText();
+    Preferences::instance()->setTheme(text);
 }
 
 void PreferencesDialog::gridColorChanged(const QColor &gridColor)

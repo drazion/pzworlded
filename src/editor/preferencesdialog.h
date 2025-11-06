@@ -36,7 +36,7 @@ public:
 
 private slots:
     void browseTilesDirectory();
-
+    void themeChanged(int index);
     void gridColorChanged(const QColor &gridColor);
 
     void accept();
