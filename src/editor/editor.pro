@@ -12,6 +12,9 @@ greaterThan(QT_MAJOR_VERSION, 5) {
     QT += openglwidgets
 }
 
+# For 'breeze' style using SVG icons
+QT += svg
+
 # MSVC
 win32 {
     QMAKE_CFLAGS_RELEASE += -Zi
