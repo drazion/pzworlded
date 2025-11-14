@@ -85,6 +85,10 @@
 #include "InGameMap/ingamemapwriter.h"
 #include "InGameMap/ingamemapwriterbinary.h"
 
+#include "shortcut/actionmanager.h"
+#include "shortcut/shortcuteditorwidget.h"
+#include "shortcut/keyboardshortcutwindow.h"
+
 #include "layer.h"
 #include "mapobject.h"
 #include "maprenderer.h"
@@ -186,20 +190,20 @@ MainWindow::MainWindow(QWidget *parent)
     ui->actionZoomOut->setShortcuts(keys);
 
     QUndoGroup *undoGroup = docman()->undoGroup();
-    QAction *undoAction = undoGroup->createUndoAction(this, tr("Undo"));
-    QAction *redoAction = undoGroup->createRedoAction(this, tr("Redo"));
-    redoAction->setPriority(QAction::LowPriority);
-    undoAction->setIconText(tr("Undo"));
-    undoAction->setShortcuts(QKeySequence::Undo);
-    redoAction->setIconText(tr("Redo"));
-    redoAction->setShortcuts(QKeySequence::Redo);
+    mUndoAction = undoGroup->createUndoAction(this, tr("Undo"));
+    mRedoAction = undoGroup->createRedoAction(this, tr("Redo"));
+    mRedoAction->setPriority(QAction::LowPriority);
+    mUndoAction->setIconText(tr("Undo"));
+    mUndoAction->setShortcuts(QKeySequence::Undo);
+    mRedoAction->setIconText(tr("Redo"));
+    mRedoAction->setShortcuts(QKeySequence::Redo);
     connect(undoGroup, &QUndoGroup::cleanChanged, this, &MainWindow::updateWindowTitle);
     QAction *separator = ui->editMenu->actions().first();
-    ui->editMenu->insertAction(separator, undoAction);
-    ui->editMenu->insertAction(separator, redoAction);
+    ui->editMenu->insertAction(separator, mUndoAction);
+    ui->editMenu->insertAction(separator, mRedoAction);
 
-    ui->mainToolBar->addAction(undoAction);
-    ui->mainToolBar->addAction(redoAction);
+    ui->mainToolBar->addAction(mUndoAction);
+    ui->mainToolBar->addAction(mRedoAction);
 
     QIcon newIcon = ui->actionNew->icon();
     QIcon openIcon = ui->actionOpen->icon();
@@ -215,8 +219,8 @@ MainWindow::MainWindow(QWidget *parent)
     ui->actionNew->setIcon(newIcon);
     ui->actionOpen->setIcon(openIcon);
     ui->actionSave->setIcon(saveIcon);
-    undoAction->setIcon(undoIcon);
-    redoAction->setIcon(redoIcon);
+    mUndoAction->setIcon(undoIcon);
+    mRedoAction->setIcon(redoIcon);
 
     mUndoDock = new UndoDock(undoGroup, this);
 
@@ -291,6 +295,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->actionClipboard, &QAction::triggered, this, &MainWindow::showClipboard);
 
     connect(ui->actionPreferences, &QAction::triggered, this, &MainWindow::preferencesDialog);
+    connect(ui->actionKeyboardShortcuts, &QAction::triggered, this, &MainWindow::keyboardShortcuts);
 
     connect(ui->actionResizeWorld, &QAction::triggered, this, &MainWindow::resizeWorld);
     connect(ui->actionObjectGroups, &QAction::triggered, this, &MainWindow::objectGroupsDialog);
@@ -362,35 +367,43 @@ MainWindow::MainWindow(QWidget *parent)
     connect(docman(), &DocumentManager::documentAboutToClose, this, &MainWindow::documentAboutToClose);
     connect(docman(), &DocumentManager::currentDocumentChanged, this, &MainWindow::currentDocumentChanged);
 
+    initActionManager();
+    QString CONTEXT_TOOL = QStringLiteral("Tool");
+    QString CATEGORY_TOOL_WORLD = QStringLiteral("World");
+    QString CATEGORY_TOOL_CELL = QStringLiteral("Cell");
+    QString CATEGORY_TOOL_OBJECT = QStringLiteral("Object");
+    QString CATEGORY_TOOL_INGAME_MAP = QStringLiteral("InGameMap");
+    QString CATEGORY_TOOL_OTHER = QStringLiteral("Other");
+
     ToolManager *toolManager = ToolManager::instance();
-    toolManager->registerTool(WorldCellTool::instance());
-    toolManager->registerTool(PasteCellsTool::instance());
+    toolManager->registerTool(WorldCellTool::instance(), mActionManager, CONTEXT_TOOL, CATEGORY_TOOL_WORLD, QStringLiteral(""));
+    toolManager->registerTool(PasteCellsTool::instance(), mActionManager, CONTEXT_TOOL, CATEGORY_TOOL_WORLD, QStringLiteral(""));
 #ifdef ROAD_UI
     toolManager->registerTool(WorldSelectMoveRoadTool::instance());
     toolManager->registerTool(WorldCreateRoadTool::instance());
     toolManager->registerTool(WorldEditRoadTool::instance());
 #endif
-    toolManager->registerTool(WorldBMPTool::instance());
+    toolManager->registerTool(WorldBMPTool::instance(), mActionManager, CONTEXT_TOOL, CATEGORY_TOOL_WORLD, QStringLiteral(""));
     toolManager->addSeparator();
-    toolManager->registerTool(SubMapTool::instance());
-    toolManager->registerTool(SelectMoveObjectTool::instance());
-    toolManager->registerTool(CreateObjectTool::instance());
+    toolManager->registerTool(SubMapTool::instance(), mActionManager, CONTEXT_TOOL, CATEGORY_TOOL_CELL, QStringLiteral(""));
+    toolManager->registerTool(SelectMoveObjectTool::instance(), mActionManager, CONTEXT_TOOL, CATEGORY_TOOL_OBJECT, QStringLiteral(""));
+    toolManager->registerTool(CreateObjectTool::instance(), mActionManager, CONTEXT_TOOL, CATEGORY_TOOL_OBJECT, QStringLiteral(""));
 #if 0
     new CreatePointObjectTool;
     toolManager->registerTool(CreatePointObjectTool::instancePtr());
 #endif
     new CreatePolygonObjectTool;
-    toolManager->registerTool(CreatePolygonObjectTool::instancePtr());
+    toolManager->registerTool(CreatePolygonObjectTool::instancePtr(), mActionManager, CONTEXT_TOOL, CATEGORY_TOOL_OBJECT, QStringLiteral(""));
 #if 1
     new CreatePolylineObjectTool;
-    toolManager->registerTool(CreatePolylineObjectTool::instancePtr());
+    toolManager->registerTool(CreatePolylineObjectTool::instancePtr(), mActionManager, CONTEXT_TOOL, CATEGORY_TOOL_OBJECT, QStringLiteral(""));
 #endif
     new EditPolygonObjectTool;
-    toolManager->registerTool(EditPolygonObjectTool::instancePtr());
+    toolManager->registerTool(EditPolygonObjectTool::instancePtr(), mActionManager, CONTEXT_TOOL, CATEGORY_TOOL_OBJECT, QStringLiteral(""));
     new SpawnPointTool;
-    toolManager->registerTool(SpawnPointTool::instancePtr());
+    toolManager->registerTool(SpawnPointTool::instancePtr(), mActionManager, CONTEXT_TOOL, CATEGORY_TOOL_OBJECT, QStringLiteral(""));
     new RoomToneTool;
-    toolManager->registerTool(RoomToneTool::instancePtr());
+    toolManager->registerTool(RoomToneTool::instancePtr(), mActionManager, CONTEXT_TOOL, CATEGORY_TOOL_OBJECT, QStringLiteral(""));
 #ifdef ROAD_UI
     toolManager->registerTool(CellSelectMoveRoadTool::instance());
     toolManager->registerTool(CellCreateRoadTool::instance());
@@ -402,12 +415,17 @@ MainWindow::MainWindow(QWidget *parent)
     new CreateInGameMapRectangleTool;
     new EditInGameMapFeatureTool;
     toolManager->addSeparator();
-    toolManager->registerTool(CreateInGameMapPointTool::instancePtr());
-    toolManager->registerTool(CreateInGameMapPolygonTool::instancePtr());
-    toolManager->registerTool(CreateInGameMapPolylineTool::instancePtr());
-    toolManager->registerTool(CreateInGameMapRectangleTool::instancePtr());
-    toolManager->registerTool(EditInGameMapFeatureTool::instancePtr());
+    toolManager->registerTool(CreateInGameMapPointTool::instancePtr(), mActionManager, CONTEXT_TOOL, CATEGORY_TOOL_INGAME_MAP, QStringLiteral("Tool.InGameMap.CreatePoint"));
+    toolManager->registerTool(CreateInGameMapPolygonTool::instancePtr(), mActionManager, CONTEXT_TOOL, CATEGORY_TOOL_INGAME_MAP, QStringLiteral("Tool.InGameMap.CreatePolygon"));
+    toolManager->registerTool(CreateInGameMapPolylineTool::instancePtr(), mActionManager, CONTEXT_TOOL, CATEGORY_TOOL_INGAME_MAP, QStringLiteral("Tool.InGameMap.CreatePolyline"));
+    toolManager->registerTool(CreateInGameMapRectangleTool::instancePtr(), mActionManager, CONTEXT_TOOL, CATEGORY_TOOL_INGAME_MAP, QStringLiteral("Tool.InGameMap.CreateRectangle"));
+    toolManager->registerTool(EditInGameMapFeatureTool::instancePtr(), mActionManager, CONTEXT_TOOL, CATEGORY_TOOL_INGAME_MAP, QStringLiteral("Tool.InGameMap.EditFeature"));
     addToolBar(toolManager->toolBar());
+
+    // Do this after all ToolManager::register() calls.
+    QString error;
+    mActionManager->load(error);
+    mActionManager->emitShortcutEditedForAllActions();
 
     ui->currentLevelButton->setMenu(mCurrentLevelMenu);
     connect(mCurrentLevelMenu, &QMenu::aboutToShow, this, &MainWindow::aboutToShowCurrentLevelMenu);
@@ -466,10 +484,14 @@ void MainWindow::closeEvent(QCloseEvent *event)
     if (mLotPackWindow)
         mLotPackWindow->close();
 
-    if (confirmAllSave())
+    if (confirmAllSave()) {
+        if (mKeyboardShortcutWindow != nullptr) {
+            mKeyboardShortcutWindow->close();
+        }
         event->accept();
-    else
+    } else {
         event->ignore();
+    }
 }
 
 void MainWindow::changeEvent(QEvent *event)
@@ -1882,6 +1904,111 @@ void MainWindow::preferencesDialog()
     dialog.exec();
 }
 
+void MainWindow::initActionManager()
+{
+    const QString fileName = Preferences::instance()->userPath(QStringLiteral("shortcuts/WorldEd.txt"));
+    mActionManager = new ActionManager(fileName, this);
+
+    const QString CONTEXT_MENU = QStringLiteral("Menu");
+    const QString CATEGORY_MENU_FILE = QStringLiteral("File");
+    const QString CATEGORY_MENU_EDIT = QStringLiteral("Edit");
+    const QString CATEGORY_MENU_VIEW = QStringLiteral("View");
+    const QString CATEGORY_MENU_WORLD = QStringLiteral("World");
+    const QString CATEGORY_MENU_CELL = QStringLiteral("Cell");
+    const QString CATEGORY_MENU_INGAME_MAP = QStringLiteral("InGameMap");
+
+    ActionManager *actionManager = mActionManager;
+    actionManager->registerAction(ui->actionNew, CONTEXT_MENU, CATEGORY_MENU_FILE, QStringLiteral("Menu.File.New"));
+    actionManager->registerAction(ui->actionOpen, CONTEXT_MENU, CATEGORY_MENU_FILE, QStringLiteral("Menu.File.Open"));
+    actionManager->registerAction(ui->actionSave, CONTEXT_MENU, CATEGORY_MENU_FILE, QStringLiteral("Menu.File.Save"));
+    actionManager->registerAction(ui->actionSaveAs, CONTEXT_MENU, CATEGORY_MENU_FILE, QStringLiteral("Menu.File.SaveAs"));
+    actionManager->registerAction(ui->actionGenerateLotsAll8x8, CONTEXT_MENU, CATEGORY_MENU_FILE, QStringLiteral("Menu.File.GenerateLotsAll8x8"), QStringLiteral("Generate Lots | All 8x8"));
+    actionManager->registerAction(ui->actionGenerateLotsSelected8x8, CONTEXT_MENU, CATEGORY_MENU_FILE, QStringLiteral("Menu.File.GenerateLotsSelected8x8"), QStringLiteral("Generate Lots | Selected 8x8"));
+    actionManager->registerAction(ui->actionClose, CONTEXT_MENU, CATEGORY_MENU_FILE, QStringLiteral("Menu.File.Close"));
+    actionManager->registerAction(ui->actionCloseAll, CONTEXT_MENU, CATEGORY_MENU_FILE, QStringLiteral("Menu.File.CloseAll"));
+    actionManager->registerAction(ui->actionQuit, CONTEXT_MENU, CATEGORY_MENU_FILE, QStringLiteral("Menu.File.Quit"));
+
+    actionManager->registerAction(mUndoAction, CONTEXT_MENU, CATEGORY_MENU_EDIT, QStringLiteral("Menu.Edit.Undo"));
+    actionManager->registerAction(mRedoAction, CONTEXT_MENU, CATEGORY_MENU_EDIT, QStringLiteral("Menu.Edit.Redo"));
+    actionManager->registerAction(ui->actionCopy, CONTEXT_MENU, CATEGORY_MENU_EDIT, QStringLiteral("Menu.Edit.Copy"));
+    actionManager->registerAction(ui->actionPaste, CONTEXT_MENU, CATEGORY_MENU_EDIT, QStringLiteral("Menu.Edit.Paste"));
+    actionManager->registerAction(ui->actionPreferences, CONTEXT_MENU, CATEGORY_MENU_EDIT, QStringLiteral("Menu.Edit.KeyboardShortcuts"));
+    actionManager->registerAction(ui->actionKeyboardShortcuts, CONTEXT_MENU, CATEGORY_MENU_EDIT, QStringLiteral("Menu.Edit.KeyboardShortcuts"));
+
+    actionManager->registerAction(ui->actionShowCellBorder, CONTEXT_MENU, CATEGORY_MENU_VIEW, QStringLiteral("Menu.View.ShowCellBorder"));
+    actionManager->registerAction(ui->actionShowCoordinates, CONTEXT_MENU, CATEGORY_MENU_VIEW, QStringLiteral("Menu.View.ShowCoordinates"));
+    actionManager->registerAction(ui->actionShowGrid, CONTEXT_MENU, CATEGORY_MENU_VIEW, QStringLiteral("Menu.View.ShowGrid"));
+#if 0
+    actionManager->registerAction(ui->actionSnapToGrid, CONTEXT_MENU, CATEGORY_MENU_VIEW, QStringLiteral("Menu.View.SnapToGrid"));
+#endif
+    actionManager->registerAction(ui->actionShowInvisibleTiles, CONTEXT_MENU, CATEGORY_MENU_VIEW, QStringLiteral("Menu.View.ShowInvisibleTiles"));
+    actionManager->registerAction(ui->actionShowLotFloorsOnly, CONTEXT_MENU, CATEGORY_MENU_VIEW, QStringLiteral("Menu.View.ShowLotFloorsOnly"));
+    actionManager->registerAction(ui->actionShowMiniMap, CONTEXT_MENU, CATEGORY_MENU_VIEW, QStringLiteral("Menu.View.ShowMiniMap"));
+    actionManager->registerAction(ui->actionShowObjects, CONTEXT_MENU, CATEGORY_MENU_VIEW, QStringLiteral("Menu.View.ShowObjects"));
+    actionManager->registerAction(ui->actionShowObjectNames, CONTEXT_MENU, CATEGORY_MENU_VIEW, QStringLiteral("Menu.View.ShowObjectNames"));
+    actionManager->registerAction(ui->actionShowOtherWorlds, CONTEXT_MENU, CATEGORY_MENU_VIEW, QStringLiteral("Menu.View.ShowOtherWorlds"));
+    actionManager->registerAction(ui->actionShowBMP, CONTEXT_MENU, CATEGORY_MENU_VIEW, QStringLiteral("Menu.View.ShowBMP"));
+    actionManager->registerAction(ui->actionShowZombieSpawnImage, CONTEXT_MENU, CATEGORY_MENU_VIEW, QStringLiteral("Menu.View.ShowZombieSpawnImage"));
+    actionManager->registerAction(ui->actionShowZonesInWorldView, CONTEXT_MENU, CATEGORY_MENU_VIEW, QStringLiteral("Menu.View.ShowZonesInWorldView"));
+    actionManager->registerAction(ui->actionHighlightCurrentLevel, CONTEXT_MENU, CATEGORY_MENU_VIEW, QStringLiteral("Menu.View.HighlightCurrentLevel"));
+    actionManager->registerAction(ui->actionHighlightRoomUnderPointer, CONTEXT_MENU, CATEGORY_MENU_VIEW, QStringLiteral("Menu.View.HighlightRoomUnderPointer"));
+    actionManager->registerAction(ui->actionLevelAbove, CONTEXT_MENU, CATEGORY_MENU_VIEW, QStringLiteral("Menu.View.LevelAbove"));
+    actionManager->registerAction(ui->actionLevelBelow, CONTEXT_MENU, CATEGORY_MENU_VIEW, QStringLiteral("Menu.View.LevelBelow"));
+    actionManager->registerAction(ui->actionZoomIn, CONTEXT_MENU, CATEGORY_MENU_VIEW, QStringLiteral("Menu.View.ZoomIn"));
+    actionManager->registerAction(ui->actionZoomOut, CONTEXT_MENU, CATEGORY_MENU_VIEW, QStringLiteral("Menu.View.ZoomOut"));
+    actionManager->registerAction(ui->actionZoomNormal, CONTEXT_MENU, CATEGORY_MENU_VIEW, QStringLiteral("Menu.View.ZoomNormal"));
+
+    actionManager->registerAction(ui->actionEditCell, CONTEXT_MENU, CATEGORY_MENU_WORLD, QStringLiteral("Menu.World.EditCell"));
+    actionManager->registerAction(ui->actionGoToXY, CONTEXT_MENU, CATEGORY_MENU_WORLD, QStringLiteral("Menu.World.GoToXY"));
+    actionManager->registerAction(ui->actionResizeWorld, CONTEXT_MENU, CATEGORY_MENU_WORLD, QStringLiteral("Menu.World.ResizeWorld"));
+    actionManager->registerAction(ui->actionObjectTypes, CONTEXT_MENU, CATEGORY_MENU_WORLD, QStringLiteral("Menu.World.ObjectTypes"));
+    actionManager->registerAction(ui->actionObjectGroups, CONTEXT_MENU, CATEGORY_MENU_WORLD, QStringLiteral("Menu.World.ObjectGroups"));
+    actionManager->registerAction(ui->actionEnums, CONTEXT_MENU, CATEGORY_MENU_WORLD, QStringLiteral("Menu.World.Enums"));
+    actionManager->registerAction(ui->actionProperties, CONTEXT_MENU, CATEGORY_MENU_WORLD, QStringLiteral("Menu.World.Properties"));
+    actionManager->registerAction(ui->actionTemplates, CONTEXT_MENU, CATEGORY_MENU_WORLD, QStringLiteral("Menu.World.Templates"));
+    actionManager->registerAction(ui->actionRemoveBMP, CONTEXT_MENU, CATEGORY_MENU_WORLD, QStringLiteral("Menu.World.RemoveBMP"));
+
+    actionManager->registerAction(ui->actionRemoveLot, CONTEXT_MENU, CATEGORY_MENU_CELL, QStringLiteral("Menu.Cell.RemoveLot"));
+    actionManager->registerAction(ui->actionRemoveObject, CONTEXT_MENU, CATEGORY_MENU_CELL, QStringLiteral("Menu.Cell.RemoveObject"));
+    actionManager->registerAction(ui->actionSplitObjectPolygon, CONTEXT_MENU, CATEGORY_MENU_CELL, QStringLiteral("Menu.Cell.SplitPolygon"));
+    actionManager->registerAction(ui->actionExtractLots, CONTEXT_MENU, CATEGORY_MENU_CELL, QStringLiteral("Menu.Cell.ExtractLots"));
+    actionManager->registerAction(ui->actionExtractObjects, CONTEXT_MENU, CATEGORY_MENU_CELL, QStringLiteral("Menu.Cell.ExtractObjects"));
+    actionManager->registerAction(ui->actionClearCell, CONTEXT_MENU, CATEGORY_MENU_CELL, QStringLiteral("Menu.Cell.ClearCell"));
+    actionManager->registerAction(ui->actionClearMapOnly, CONTEXT_MENU, CATEGORY_MENU_CELL, QStringLiteral("Menu.Cell.ClearMapOnly"));
+
+    actionManager->registerAction(ui->actionRemoveInGameMapFeatures, CONTEXT_MENU, CATEGORY_MENU_INGAME_MAP, QStringLiteral("Menu.InGameMap.RemoveFeature"));
+    actionManager->registerAction(ui->actionRemoveInGameMapPoints, CONTEXT_MENU, CATEGORY_MENU_INGAME_MAP, QStringLiteral("Menu.InGameMap.RemovePoint"));
+    actionManager->registerAction(ui->actionSplitInGameMapPolygon, CONTEXT_MENU, CATEGORY_MENU_INGAME_MAP, QStringLiteral("Menu.InGameMap.SplitPolygon"));
+    actionManager->registerAction(ui->actionAddInGameMapHole, CONTEXT_MENU, CATEGORY_MENU_INGAME_MAP, QStringLiteral("Menu.InGameMap.AddHole"));
+    actionManager->registerAction(ui->actionRemoveInGameMapHole, CONTEXT_MENU, CATEGORY_MENU_INGAME_MAP, QStringLiteral("Menu.InGameMap.RemoveHole"));
+    actionManager->registerAction(ui->actionConvertToPolygon, CONTEXT_MENU, CATEGORY_MENU_INGAME_MAP, QStringLiteral("Menu.InGameMap.ConvertToPolygon"));
+    actionManager->registerAction(ui->actionGenerateInGameMapBuildingFeatures, CONTEXT_MENU, CATEGORY_MENU_INGAME_MAP, QStringLiteral("Menu.InGameMap.GenerateBuildingFeatures"));
+    actionManager->registerAction(ui->actionGenerateInGameMapTreeFeatures, CONTEXT_MENU, CATEGORY_MENU_INGAME_MAP, QStringLiteral("Menu.InGameMap.GenerateTreeFeatures"));
+    actionManager->registerAction(ui->actionGenerateInGameMapWaterFeatures, CONTEXT_MENU, CATEGORY_MENU_INGAME_MAP, QStringLiteral("Menu.InGameMap.GenerateWaterFeatures"));
+    actionManager->registerAction(ui->actionReadInGameMapFeaturesXML, CONTEXT_MENU, CATEGORY_MENU_INGAME_MAP, QStringLiteral("Menu.InGameMap.ReadXML"));
+    actionManager->registerAction(ui->actionWriteInGameMapFeaturesXML, CONTEXT_MENU, CATEGORY_MENU_INGAME_MAP, QStringLiteral("Menu.InGameMap.WriteXML10x10"));
+    actionManager->registerAction(ui->actionWriteInGameMapFeaturesXML_256, CONTEXT_MENU, CATEGORY_MENU_INGAME_MAP, QStringLiteral("Menu.InGameMap.WriteXML8x8"));
+    actionManager->registerAction(ui->actionOverwriteInGameMapFeaturesXML, CONTEXT_MENU, CATEGORY_MENU_INGAME_MAP, QStringLiteral("Menu.InGameMap.OverwriteXML10x10"), QStringLiteral("Overwrite Features XML 10x10"));
+    actionManager->registerAction(ui->actionOverwriteInGameMapFeaturesXML_256, CONTEXT_MENU, CATEGORY_MENU_INGAME_MAP, QStringLiteral("Menu.InGameMap.OverwriteXML8x8"), QStringLiteral("Overwrite Features XML 8x8"));
+    actionManager->registerAction(ui->actionCreateFeatureImage, CONTEXT_MENU, CATEGORY_MENU_INGAME_MAP, QStringLiteral("Menu.InGameMap.CreateFeatureImage"));
+    actionManager->registerAction(ui->actionCreateWorldImage, CONTEXT_MENU, CATEGORY_MENU_INGAME_MAP, QStringLiteral("Menu.InGameMap.CreateWorldImage"));
+    actionManager->registerAction(ui->actionCreateImagePyramid, CONTEXT_MENU, CATEGORY_MENU_INGAME_MAP, QStringLiteral("Menu.InGameMap.CreateImagePyramid"));
+
+    connect(actionManager, &ActionManager::shortcutEdited, ToolManager::instance(), &ToolManager::shortcutEdited);
+}
+
+void MainWindow::keyboardShortcuts()
+{
+    QString error;
+    mActionManager->load(error);
+    mActionManager->emitShortcutEditedForAllActions();
+    if (mKeyboardShortcutWindow == nullptr) {
+        mKeyboardShortcutWindow = new KeyboardShortcutWindow(mActionManager, &mSettings, QStringLiteral("TileZed/KeyboardShortcutsWindow"), this);
+        mKeyboardShortcutWindow->setAttribute(Qt::WA_DeleteOnClose, false);
+    }
+    mKeyboardShortcutWindow->show();
+    mKeyboardShortcutWindow->raise();
+}
 void MainWindow::objectGroupsDialog()
 {
     if (!mCurrentDocument)

@@ -25,8 +25,10 @@ namespace Ui {
 class MainWindow;
 }
 
+class ActionManager;
 class Document;
 class DocumentManager;
+class KeyboardShortcutWindow;
 class LayersDock;
 class LotsDock;
 class LotPackWindow;
@@ -127,6 +129,8 @@ public slots:
     void resizeWorld();
 
     void preferencesDialog();
+    void keyboardShortcuts();
+
     void objectGroupsDialog();
     void objectTypesDialog();
     void propertyEnumsDialog();
@@ -189,6 +193,8 @@ public slots:
 private:
     void FromToAux(bool selectedOnly);
 
+    void initActionManager();
+
     bool confirmSave();
     bool confirmAllSave();
 
@@ -246,6 +252,10 @@ private:
     Zoomable *mZoomable;
     QSettings mSettings;
     LotPackWindow *mLotPackWindow;
+    ActionManager *mActionManager = nullptr;
+    KeyboardShortcutWindow *mKeyboardShortcutWindow = nullptr;
+    QAction *mUndoAction = nullptr;
+    QAction *mRedoAction = nullptr;
 
     static MainWindow *mInstance;
 };

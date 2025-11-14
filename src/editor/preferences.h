@@ -31,6 +31,9 @@ public:
     static Preferences *instance();
     static void deleteInstance();
 
+    QString userPath() const;
+    QString userPath(const QString &fileName) const;
+
     QString configPath() const;
     QString configPath(const QString &fileName) const;
 

@@ -86,6 +86,12 @@ SOURCES += main.cpp\
     navigation/isochunk256.cpp \
     navigation/isogridsquare256.cpp \
     pngzonesdialog.cpp \
+    shortcut/actionmanager.cpp \
+    shortcut/keyboardshortcutfile.cpp \
+    shortcut/keyboardshortcutwindow.cpp \
+    shortcut/shortcuteditordelegate.cpp \
+    shortcut/shortcuteditormodel.cpp \
+    shortcut/shortcuteditorwidget.cpp \
     tiledeftextfile.cpp \
     tilesetstxtfile.cpp \
     worldview.cpp \
@@ -204,6 +210,12 @@ HEADERS  += mainwindow.h \
     navigation/isochunk256.h \
     navigation/isogridsquare256.h \
     pngzonesdialog.h \
+    shortcut/actionmanager.h \
+    shortcut/keyboardshortcutfile.h \
+    shortcut/keyboardshortcutwindow.h \
+    shortcut/shortcuteditordelegate.h \
+    shortcut/shortcuteditormodel.h \
+    shortcut/shortcuteditorwidget.h \
     tiledeftextfile.h \
     tilesetstxtfile.h \
     worldconstants.h \
@@ -310,6 +322,7 @@ FORMS    += mainwindow.ui \
     pngzonesdialog.ui \
     propertiesview.ui \
     propertiesdialog.ui \
+    shortcut/keyboardshortcutwindow.ui \
     templatesdialog.ui \
     objecttypesdialog.ui \
     preferencesdialog.ui \

@@ -22,6 +22,7 @@
 
 #include "basegraphicsscene.h"
 #include "scenetools.h"
+#include "shortcut/actionmanager.h"
 
 #include <QAction>
 #include <QActionGroup>
@@ -81,17 +82,18 @@ ToolManager::~ToolManager()
     delete mToolBar;
 }
 
-void ToolManager::registerTool(AbstractTool *tool)
+void ToolManager::registerTool(AbstractTool *tool, ActionManager *actionManager, const QString &context, const QString &category, const QString &fileID)
 {
     QAction *toolAction = new QAction(tool->icon(), tool->name(), this);
     toolAction->setShortcut(tool->shortcut());
     toolAction->setData(QVariant::fromValue<AbstractTool*>(tool));
     toolAction->setCheckable(true);
     QString shortcut = tool->shortcut().toString();
-    if (shortcut.length())
+    if (shortcut.length()) {
         toolAction->setToolTip(QString::fromLatin1("%1 (%2)").arg(tool->name(), shortcut));
-    else
+    } else {
         toolAction->setToolTip(tool->name());
+    }
     toolAction->setEnabled(tool->isEnabled());
     mActionGroup->addAction(toolAction);
     mToolBar->addAction(toolAction);
@@ -104,6 +106,8 @@ void ToolManager::registerTool(AbstractTool *tool)
         setSelectedTool(tool);
         toolAction->setChecked(true);
     }
+
+    actionManager->registerAction(toolAction, context, category, fileID);
 }
 
 void ToolManager::addSeparator()
@@ -127,6 +131,20 @@ void ToolManager::selectTool(AbstractTool *tool)
     foreach (QAction *action, mActionGroup->actions())
         action->setChecked(false);
     setSelectedTool(0);
+}
+
+void ToolManager::shortcutEdited(QAction *action)
+{
+    if (!action->data().canConvert<AbstractTool*>()) {
+        return;
+    }
+    AbstractTool *tool = action->data().value<AbstractTool*>();
+    tool->setShortcut(action->shortcut());
+    if (tool->shortcut().toString().isEmpty()) {
+        action->setToolTip(tool->name());
+    } else {
+        action->setToolTip(QStringLiteral("%1 (%2)").arg(tool->name(), tool->shortcut().toString()));
+    }
 }
 
 void ToolManager::setScene(BaseGraphicsScene *scene)

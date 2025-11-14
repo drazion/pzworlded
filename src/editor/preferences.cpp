@@ -157,6 +157,17 @@ Preferences::~Preferences()
     delete mSettings;
 }
 
+QString Preferences::userPath() const
+{
+    QString userPath = QDir::homePath() + QLatin1Char('/') + QLatin1String(".TileZed");
+    return userPath;
+}
+
+QString Preferences::userPath(const QString &fileName) const
+{
+    return userPath() + QLatin1Char('/') + fileName;
+}
+
 QString Preferences::configPath() const
 {
     return mConfigDirectory;

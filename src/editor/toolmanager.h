@@ -24,6 +24,7 @@
 #include <QObject>
 #include <QToolBar>
 
+class ActionManager;
 class BaseGraphicsScene;
 class Document;
 
@@ -76,7 +77,7 @@ public:
      * Registers a new tool. It will be added to the tools tool bar. The tool
      * manager does not take ownership over the tool.
      */
-    void registerTool(AbstractTool *tool);
+    void registerTool(AbstractTool *tool, ActionManager *actionManager, const QString &context, const QString &category, const QString &fileID);
 
     /**
      * Adds a separator to the tool bar between the last registered tool and
@@ -113,6 +114,9 @@ signals:
      * @see AbstractTool::setStatusInfo()
      */
     void statusInfoChanged(const QString &info);
+
+public slots:
+    void shortcutEdited(QAction *action);
 
 private slots:
     void actionTriggered(QAction *action);
