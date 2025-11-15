@@ -1671,6 +1671,7 @@ void WorldCoordItem::paint(QPainter *painter,
     int lineHeight = fm.lineSpacing();
 
     QPen pen = painter->pen();
+    pen.setColor(Qt::black);
     pen.setCosmetic(true);
     painter->setPen(pen);
 
