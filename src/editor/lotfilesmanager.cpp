@@ -340,7 +340,7 @@ bool LotFilesManager::generateCell(WorldCell *cell)
     Tile *missingTile = Tiled::Internal::TilesetManager::instance()->missingTile();
     QVector<const Tiled::Cell *> cells(40);
     for (CompositeLayerGroup *lg : mapComposite->layerGroups()) {
-        lg->prepareDrawing2();
+        lg->prepareDrawing2(false);
         int d = (mapInfo->orientation() == Map::Isometric) ? -3 : 0;
         d *= lg->level();
         for (int y = d; y < mapHeight; y++) {

@@ -174,7 +174,7 @@ public:
         , h(h)
         , floor(level)
         , name(name)
-        , room(0)
+        , room(nullptr)
     {
 
     }
@@ -226,7 +226,6 @@ public:
     int floor;
     QString name;
     Room *room;
-    WorldCell *mCell;
 };
 
 class Room
@@ -236,7 +235,7 @@ public:
         : ID(-1)
         , floor(level)
         , name(name)
-        , building(0)
+        , building(nullptr)
     {
 
     }
@@ -277,7 +276,6 @@ public:
     QList<RoomRect*> rects;
     QList<RoomObject> objects;
     QRect mBounds;
-    WorldCell *mCell;
 };
 
 class Building

@@ -176,7 +176,7 @@ void LootWindow::examineMapComposite(MapComposite *mc)
 
     static QVector<const Tiled::Cell*> cells(40);
     foreach (CompositeLayerGroup *lg, mc->sortedLayerGroups()) {
-        lg->prepareDrawing2();
+        lg->prepareDrawing2(false);
         for (int y = 0; y < mc->mapInfo()->height(); y++) {
             for (int x = 0; x < mc->mapInfo()->width(); x++) {
                 cells.resize(0);

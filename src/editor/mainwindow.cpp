@@ -2003,7 +2003,7 @@ void MainWindow::keyboardShortcuts()
     mActionManager->load(error);
     mActionManager->emitShortcutEditedForAllActions();
     if (mKeyboardShortcutWindow == nullptr) {
-        mKeyboardShortcutWindow = new KeyboardShortcutWindow(mActionManager, &mSettings, QStringLiteral("TileZed/KeyboardShortcutsWindow"), this);
+        mKeyboardShortcutWindow = new KeyboardShortcutWindow(mActionManager, &mSettings, QStringLiteral("KeyboardShortcutsWindow"), this);
         mKeyboardShortcutWindow->setAttribute(Qt::WA_DeleteOnClose, false);
     }
     mKeyboardShortcutWindow->show();

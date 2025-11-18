@@ -37,7 +37,9 @@ class Road;
 #endif // ROAD_CRUD
 
 namespace Tiled {
+class Cell;
 class Layer;
+class TileLayer;
 namespace Internal {
 class BmpBlender;
 }
@@ -45,6 +47,26 @@ class BmpBlender;
 
 class CompositeLayerGroup;
 class MapComposite;
+
+struct OrderedCell
+{
+    OrderedCell()
+        : layer(nullptr)
+        , cell(nullptr)
+    {
+
+    }
+
+    OrderedCell(Tiled::TileLayer *layer, const Tiled::Cell *cell)
+        : layer(layer)
+        , cell(cell)
+    {
+
+    }
+
+    Tiled::TileLayer *layer;
+    const Tiled::Cell *cell;
+};
 
 struct TilePlusLayer
 {
@@ -129,8 +151,9 @@ public:
 
     QRectF boundingRect(const Tiled::MapRenderer *renderer) const;
 
-    void prepareDrawing2();
+    void prepareDrawing2(bool bGenerateLots);
     bool orderedCellsAt2(const QPoint &pos, QVector<const Tiled::Cell*>& cells) const;
+    void orderedCellsAt2(const QPoint &pos, QVector<OrderedCell>& cells) const;
 
     void prepareDrawingNoBmpBlender(const Tiled::MapRenderer *renderer, const QRect &rect);
 
@@ -228,7 +251,8 @@ private:
         QRect mBounds;
     };
 
-    QVector<SubMapLayers> mPreparedSubMapLayers;
+    QVector<SubMapLayers> mPreparedSubMapLayers; // cell
+    QVector<SubMapLayers> mPreparedSubMapLayers2; // building
     QVector<SubMapLayers> mVisibleSubMapLayers;
 
     QVector<Tiled::TileLayer*> mBmpBlendLayers;

@@ -101,6 +101,15 @@ bool WorldCell::isEmpty() const
     return true;
 }
 
+void WorldCell::getLotsOverlappingCellBounds(WorldCellLotList &result) const
+{
+    for (WorldCellLot *lot : lots()) {
+        if (lot->bounds().x() < 0 || lot->bounds().y() < 0 || lot->bounds().right() >= 300 || lot->bounds().bottom() >= 300) {
+            result += lot;
+        }
+    }
+}
+
 /////
 
 WorldObjectGroup::WorldObjectGroup(World *world)

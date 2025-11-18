@@ -560,8 +560,6 @@ bool InGameMapModel::dropMimeData(const QMimeData* data,
      if (parentItem == nullptr || parentItem != mRootItem)
          return false;
 
-     WorldDocument* worldDoc = mWorldDoc ? mWorldDoc : mCellDoc->worldDocument();
-
      QByteArray encodedData = data->data(InGameMapModelMimeType);
      QDataStream stream(&encodedData, QIODevice::ReadOnly);
      QList<InGameMapFeature*> features;
@@ -574,6 +572,8 @@ bool InGameMapModel::dropMimeData(const QMimeData* data,
          ++rows;
      }
 #if 0
+     WorldDocument* worldDoc = mWorldDoc ? mWorldDoc : mCellDoc->worldDocument();
+
      // Note: parentItem may be destroyed by setCell()
      int count = features.size();
      if (count > 1)

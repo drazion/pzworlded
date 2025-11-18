@@ -55,6 +55,8 @@ static int VERSION1 = 1; // Added 4-byte 'LOTH' at start of .lotheader files.
 
 static int VERSION_LATEST = VERSION1;
 
+#define MERGE_ROOMS_ACROSS_CELL_BOUNDARIES 1
+
 static QString nameOfTileset(const Tileset *tileset)
 {
     QString name = tileset->imageSource();
@@ -105,7 +107,23 @@ LotFilesManager256::LotFilesManager256(QObject *parent) :
 
 LotFilesManager256::~LotFilesManager256()
 {
-//    stopThreads();
+    //    stopThreads();
+}
+
+void LotFilesManager256::collectLotsOverlappingCellBounds()
+{
+    mLotsOverlappingCellBounds.clear();
+
+    World *world = mWorldDoc->world();
+    for (int y = 0; y < world->height(); y++) {
+        for (int x = 0; x < world->width(); x++) {
+            WorldCell *cell = world->cellAt(x, y);
+            if (cell == nullptr) {
+                continue;
+            }
+            cell->getLotsOverlappingCellBounds(mLotsOverlappingCellBounds);
+        }
+    }
 }
 
 void LotFilesManager256::startThreads(int numberOfThreads)
@@ -177,7 +195,7 @@ bool LotFilesManager256::generateWorld(WorldDocument *worldDoc, GenerateMode mod
     mCancel = false;
 
     QString spawnMap = lotSettings.zombieSpawnMap;
-    if (!QFileInfo(spawnMap).exists()) {
+    if (!QFileInfo::exists(spawnMap)) {
         mError = tr("Couldn't find the Zombie Spawn Map image.\n%1")
                 .arg(spawnMap);
         delete mDialog;
@@ -200,7 +218,7 @@ bool LotFilesManager256::generateWorld(WorldDocument *worldDoc, GenerateMode mod
     }
 
     QString tilesDirectory = TileMetaInfoMgr::instance()->tilesDirectory();
-    if (tilesDirectory.isEmpty() || !QFileInfo(tilesDirectory).exists()) {
+    if (tilesDirectory.isEmpty() || !QFileInfo::exists(tilesDirectory)) {
         mError = tr("The Tiles Directory could not be found.  Please set it in the Tilesets Dialog in TileZed.");
         delete mDialog;
         mDialog = nullptr;
@@ -226,6 +244,8 @@ bool LotFilesManager256::generateWorld(WorldDocument *worldDoc, GenerateMode mod
     mCell256Queue.clear();
 
     mFailures.clear();
+
+    collectLotsOverlappingCellBounds();
 
     startThreads(lotSettings.numberOfThreads);
 
@@ -493,7 +513,7 @@ void LotFilesManager256::updateWorkers()
 
     if (!mFailures.isEmpty()) {
         QStringList errorList;
-        for (GenerateCellFailure failure : mFailures) {
+        for (const GenerateCellFailure& failure : qAsConst(mFailures)) {
             errorList += QString(QStringLiteral("Cell %1,%2: %3")).arg(failure.cell->x()).arg(failure.cell->y()).arg(failure.error);
         }
         GenerateLotsFailureDialog dialog(errorList, MainWindow::instance());
@@ -560,7 +580,7 @@ bool LotFilesManager256::generateCell(LotFilesWorker256 *worker, WorldCell *cell
 #endif
     mProgressDialog->setPrompt(tr("Loading maps (%1,%2)").arg(cell256X).arg(cell256Y));
     CombinedCellMaps *combinedMaps = new CombinedCellMaps();
-    bool ok = combinedMaps->startLoading(mWorldDoc, cell256X, cell256Y);
+    bool ok = combinedMaps->startLoading(mWorldDoc, cell256X, cell256Y, mLotsOverlappingCellBounds);
     qApp->processEvents(QEventLoop::ProcessEventsFlag::AllEvents);
     if ((ok == false) || (combinedMaps->mError.isEmpty() == false)) {
         mError = combinedMaps->mError;
@@ -595,7 +615,7 @@ bool LotFilesManager256::overwriteSpawnMap(WorldDocument *worldDoc, GenerateMode
     progress.setPrompt(QLatin1String("Reading Zombie Spawn Map"));
 
     QString spawnMap = lotSettings.zombieSpawnMap;
-    if (!QFileInfo(spawnMap).exists()) {
+    if (!QFileInfo::exists(spawnMap)) {
         mError = tr("Couldn't find the Zombie Spawn Map image.\n%1")
                 .arg(spawnMap);
         return false;
@@ -912,7 +932,7 @@ bool LotFilesWorker256::generateCell()
     bool chunkDataOnly = false;
     if (chunkDataOnly) {
         for (CompositeLayerGroup *lg : mapComposite->layerGroups()) {
-            lg->prepareDrawing2();
+            lg->prepareDrawing2(true);
         }
         generateChunkData();
         clearRemovedBuildingsList();
@@ -943,7 +963,7 @@ bool LotFilesWorker256::generateCell()
                         CELL_SIZE_256, CELL_SIZE_256);
     QVector<const Tiled::Cell *> cells(40);
     for (CompositeLayerGroup *lg : mapComposite->layerGroups()) {
-        lg->prepareDrawing2();
+        lg->prepareDrawing2(true);
         int d = (mapInfo->orientation() == Map::Isometric) ? -3 : 0;
         d *= lg->level();
         for (int y = d; y < mapHeight; y++) {
@@ -1089,22 +1109,33 @@ bool LotFilesWorker256::generateHeader(CombinedCellMaps& combinedMaps, MapCompos
     mTilesetToFirstGid.clear();
     mTilesetNameToFirstGid.clear();
     uint firstGid = 1;
-    for (Tileset *tileset : tilesets) {
+    for (Tileset *tileset : qAsConst(tilesets)) {
         if (!handleTileset(tileset, firstGid))
             return false;
     }
 
-    const GenerateLotsSettings &lotSettings = combinedMaps.mCells[0]->world()->getGenerateLotsSettings();
+//    const GenerateLotsSettings &lotSettings = combinedMaps.mCells[0]->world()->getGenerateLotsSettings();
 
+    if (processObjectGroups(combinedMaps, mapComposite) == false) {
+        return false;
+    }
+#if 0
     for (WorldCell *cell : combinedMaps.mCells) {
         for (MapComposite *subMap : mapComposite->subMaps()) {
+#if 1
+            if (!combinedMaps.mCellMaps.contains(subMap)) {
+                continue;
+            }
+#else
             if (subMap->origin() != (cell->pos() + lotSettings.worldOrigin - QPoint(combinedMaps.mMinCell300X,combinedMaps.mMinCell300Y)) * 300)
                 continue;
+#endif
             if (processObjectGroups(combinedMaps, cell, subMap) == false) {
                 return false;
             }
         }
     }
+#endif
 
     // Merge adjacent RoomRects on the same level into rooms.
     // Only RoomRects with matching names and with # in the name are merged.
@@ -1121,25 +1152,26 @@ bool LotFilesWorker256::generateHeader(CombinedCellMaps& combinedMaps, MapCompos
             if (rr->room == nullptr) {
                 rr->room = new LotFile::Room(rr->nameWithoutSuffix(), rr->floor);
                 rr->room->rects += rr;
-                rr->room->mCell = rr->mCell;
                 roomList += rr->room;
             }
             if (!rr->name.contains(QLatin1Char('#')))
                 continue;
             QList<LotFile::RoomRect*> rrList2;
             mRoomRectLookup.overlapping(QRect(rr->bounds().adjusted(-1, -1, 1, 1)), rrList2);
-            for (LotFile::RoomRect *comp : rrList2) {
+            for (LotFile::RoomRect *comp : qAsConst(rrList2)) {
                 if (comp == rr)
                     continue;
+#if MERGE_ROOMS_ACROSS_CELL_BOUNDARIES == 0
                 // Don't merge rects across 300x300 cell boundaries, like the south wall in the Studio map.
                 if (rr->mCell != comp->mCell)
                     continue;
+#endif
                 if (comp->room == rr->room)
                     continue;
                 if (rr->inSameRoom(comp)) {
                     if (comp->room != nullptr) {
                         LotFile::Room *room = comp->room;
-                        for (LotFile::RoomRect *rr2 : room->rects) {
+                        for (LotFile::RoomRect *rr2 : qAsConst(room->rects)) {
                             Q_ASSERT(rr2->room == room);
                             Q_ASSERT(!rr->room->rects.contains(rr2));
                             rr2->room = rr->room;
@@ -1158,7 +1190,7 @@ bool LotFilesWorker256::generateHeader(CombinedCellMaps& combinedMaps, MapCompos
     }
 
     mRoomLookup.clear(relativeToCell256.x(), relativeToCell256.y(), combinedMaps.mCellsWidth * CHUNKS_PER_CELL, combinedMaps.mCellsHeight * CHUNKS_PER_CELL, CHUNK_WIDTH);
-    for (LotFile::Room *r : roomList) {
+    for (LotFile::Room *r : qAsConst(roomList)) {
         r->mBounds = r->calculateBounds();
         mRoomLookup.add(r, r->bounds());
     }
@@ -1166,7 +1198,7 @@ bool LotFilesWorker256::generateHeader(CombinedCellMaps& combinedMaps, MapCompos
     // Merge adjacent rooms into buildings.
     // Rooms on different levels that overlap in x/y are merged into the
     // same buliding.
-    for (LotFile::Room *r : roomList) {
+    for (LotFile::Room *r : qAsConst(roomList)) {
         if (r->building == nullptr) {
             r->building = new LotFile::Building();
             buildingList += r->building;
@@ -1174,12 +1206,14 @@ bool LotFilesWorker256::generateHeader(CombinedCellMaps& combinedMaps, MapCompos
         }
         QList<LotFile::Room*> roomList2;
         mRoomLookup.overlapping(r->bounds().adjusted(-1, -1, 1, 1), roomList2);
-        for (LotFile::Room *comp : roomList2) {
+        for (LotFile::Room *comp : qAsConst(roomList2)) {
             if (comp == r)
                 continue;
+#if MERGE_ROOMS_ACROSS_CELL_BOUNDARIES == 0
             // Don't merge rooms across 300x300 cell boundaries, like the south wall in the Studio map.
             if (r->mCell != comp->mCell)
                 continue;
+#endif
             if (r->building == comp->building)
                 continue;
             if ((r->floor < 0) != (comp->floor < 0)) {
@@ -1189,7 +1223,7 @@ bool LotFilesWorker256::generateHeader(CombinedCellMaps& combinedMaps, MapCompos
             if (r->inSameBuilding(comp)) {
                 if (comp->building != nullptr) {
                     LotFile::Building *b = comp->building;
-                    for (LotFile::Room *r2 : b->RoomList) {
+                    for (LotFile::Room *r2 : qAsConst(b->RoomList)) {
                         Q_ASSERT(r2->building == b);
                         Q_ASSERT(!r->building->RoomList.contains(r2));
                         r2->building = r->building;
@@ -1218,8 +1252,8 @@ bool LotFilesWorker256::generateHeader(CombinedCellMaps& combinedMaps, MapCompos
         if (cellBounds256.contains(bounds.topLeft())) {
             continue;
         }
-        for (LotFile::Room *room : building->RoomList) {
-            for (LotFile::RoomRect *roomRect : room->rects) {
+        for (LotFile::Room *room : qAsConst(building->RoomList)) {
+            for (LotFile::RoomRect *roomRect : qAsConst(room->rects)) {
                 mRoomRects.removeOne(roomRect);
                 mRoomRectByLevel[roomRect->floor].removeOne(roomRect);
 //                delete roomRect;
@@ -1264,7 +1298,7 @@ bool LotFilesWorker256::generateHeaderAux(int cell256X, int cell256Y)
     out << qint32(VERSION_LATEST);
 
     QList<LotFile::Tile*> usedTiles;
-    for (LotFile::Tile *tile : TileMap) {
+    for (LotFile::Tile *tile : qAsConst(TileMap)) {
         if (tile->used) {
             usedTiles += tile;
             if (tile->name.startsWith(QLatin1String("jumbo_tree_01"))) {
@@ -1289,12 +1323,12 @@ bool LotFilesWorker256::generateHeaderAux(int cell256X, int cell256Y)
     out << qint32(mMaxLevel);
 
     out << qint32(roomList.count());
-    for (LotFile::Room *room : roomList) {
+    for (LotFile::Room *room : qAsConst(roomList)) {
         SaveString(out, room->name);
         out << qint32(room->floor);
 
         out << qint32(room->rects.size());
-        for (LotFile::RoomRect *rr : room->rects) {
+        for (LotFile::RoomRect *rr : qAsConst(room->rects)) {
             out << qint32(rr->x);
             out << qint32(rr->y);
             out << qint32(rr->w);
@@ -1302,7 +1336,7 @@ bool LotFilesWorker256::generateHeaderAux(int cell256X, int cell256Y)
         }
 
         out << qint32(room->objects.size());
-        for (const LotFile::RoomObject &object : room->objects) {
+        for (const LotFile::RoomObject &object : qAsConst(room->objects)) {
             out << qint32(object.metaEnum);
             out << qint32(object.x);
             out << qint32(object.y);
@@ -1310,9 +1344,9 @@ bool LotFilesWorker256::generateHeaderAux(int cell256X, int cell256Y)
     }
 
     out << qint32(buildingList.count());
-    for (LotFile::Building *building : buildingList) {
+    for (LotFile::Building *building : qAsConst(buildingList)) {
         out << qint32(building->RoomList.count());
-        for (LotFile::Room *room : building->RoomList) {
+        for (LotFile::Room *room : qAsConst(building->RoomList)) {
             out << qint32(room->ID);
         }
     }
@@ -1406,8 +1440,8 @@ bool LotFilesWorker256::generateChunk(QDataStream &out, int chunkX, int chunkY)
 
 void LotFilesWorker256::generateBuildingObjects(int mapWidth, int mapHeight)
 {
-    for (LotFile::Room *room : roomList) {
-        for (LotFile::RoomRect *rr : room->rects) {
+    for (LotFile::Room *room : qAsConst(roomList)) {
+        for (LotFile::RoomRect *rr : qAsConst(room->rects)) {
             generateBuildingObjects(mapWidth, mapHeight, room, rr);
         }
     }
@@ -1417,6 +1451,9 @@ void LotFilesWorker256::generateBuildingObjects(int mapWidth, int mapHeight, Lot
 {
     for (int x = rr->x; x < rr->x + rr->w; x++) {
         for (int y = rr->y; y < rr->y + rr->h; y++) {
+            if (x < 0 || y < 0 || x >= mapWidth || y >= mapHeight) {
+                continue;
+            }
             LotFile::Square& square = mGridData[x][y][room->floor - MIN_WORLD_LEVEL];
 
             // Remember the room at each position in the map.
@@ -1425,7 +1462,7 @@ void LotFilesWorker256::generateBuildingObjects(int mapWidth, int mapHeight, Lot
 
             /* Examine every tile inside the room.  If the tile's metaEnum >= 0
                then create a new RoomObject for it. */
-            for (LotFile::Entry *entry : square.Entries) {
+            for (LotFile::Entry *entry : qAsConst(square.Entries)) {
                 int metaEnum = TileMap[entry->gid]->metaEnum;
                 if (metaEnum >= 0) {
                     LotFile::RoomObject object;
@@ -1441,10 +1478,13 @@ void LotFilesWorker256::generateBuildingObjects(int mapWidth, int mapHeight, Lot
 
     // Check south of the room for doors.
     int y = rr->y + rr->h;
-    if (y < mapHeight) {
+    if (y >= 0 && y < mapHeight) {
         for (int x = rr->x; x < rr->x + rr->w; x++) {
+            if (x < 0 || x >= mapWidth) {
+                continue;
+            }
             LotFile::Square& square = mGridData[x][y][room->floor - MIN_WORLD_LEVEL];
-            for (LotFile::Entry *entry : square.Entries) {
+            for (LotFile::Entry *entry : qAsConst(square.Entries)) {
                 int metaEnum = TileMap[entry->gid]->metaEnum;
                 if (metaEnum >= 0 && TileMetaInfoMgr::instance()->isEnumNorth(metaEnum)) {
                     LotFile::RoomObject object;
@@ -1460,10 +1500,13 @@ void LotFilesWorker256::generateBuildingObjects(int mapWidth, int mapHeight, Lot
 
     // Check east of the room for doors.
     int x = rr->x + rr->w;
-    if (x < mapWidth) {
+    if (x >= 0 && x < mapWidth) {
         for (int y = rr->y; y < rr->y + rr->h; y++) {
+            if (y < 0 || y >= mapHeight) {
+                continue;
+            }
             LotFile::Square& square = mGridData[x][y][room->floor - MIN_WORLD_LEVEL];
-            for (LotFile::Entry *entry : square.Entries) {
+            for (LotFile::Entry *entry : qAsConst(square.Entries)) {
                 int metaEnum = TileMap[entry->gid]->metaEnum;
                 if (metaEnum >= 0 && TileMetaInfoMgr::instance()->isEnumWest(metaEnum)) {
                     LotFile::RoomObject object;
@@ -1489,9 +1532,9 @@ void LotFilesWorker256::generateJumboTrees(CombinedCellMaps& combinedMaps)
 
     QSet<QString> treeTiles;
     QSet<QString> floorVegTiles;
-    for (TileDefFile *tdf : Navigate::IsoGridSquare256::mTileDefFiles) {
+    for (TileDefFile *tdf : qAsConst(Navigate::IsoGridSquare256::mTileDefFiles)) {
         for (TileDefTileset *tdts : tdf->tilesets()) {
-            for (TileDefTile *tdt : tdts->mTiles) {
+            for (TileDefTile *tdt : qAsConst(tdts->mTiles)) {
                 // Get the set of all tree tiles.
                 if (tdt->mProperties.contains(QLatin1String("tree")) || (tdts->mName.startsWith(QLatin1String("vegetation_trees")))) {
                     treeTiles += QString::fromLatin1("%1_%2").arg(tdts->mName).arg(tdt->id());
@@ -1529,7 +1572,7 @@ void LotFilesWorker256::generateJumboTrees(CombinedCellMaps& combinedMaps)
                         CELL_SIZE_256, CELL_SIZE_256);
 
     ClipperLib::Path zonePath;
-    for (WorldCell* cell : combinedMaps.mCells) {
+    for (WorldCell* cell : qAsConst(combinedMaps.mCells)) {
         QPoint cellPos300((cell->x() + lotSettings.worldOrigin.x() - combinedMaps.mMinCell300X) * CELL_WIDTH,
                           (cell->y() + lotSettings.worldOrigin.y() - combinedMaps.mMinCell300Y) * CELL_HEIGHT);
         for (WorldCellObject *obj : cell->objects()) {
@@ -1697,9 +1740,9 @@ void LotFilesWorker256::generateChunkData()
     for (LotFile::RoomRect *rr : mRoomRectByLevel[0]) {
         mRoomRectLookup.add(rr, rr->bounds());
     }
-    for (LotFile::Building *building : mRemovedBuildingList) {
-        for (LotFile::Room *room : building->RoomList) {
-            for (LotFile::RoomRect *rr : room->rects) {
+    for (LotFile::Building *building : qAsConst(mRemovedBuildingList)) {
+        for (LotFile::Room *room : qAsConst(building->RoomList)) {
+            for (LotFile::RoomRect *rr : qAsConst(room->rects)) {
                 if (rr->floor == 0) {
                     mRoomRectLookup.add(rr, rr->bounds());
                 }
@@ -1713,9 +1756,9 @@ void LotFilesWorker256::generateChunkData()
 
 void LotFilesWorker256::clearRemovedBuildingsList()
 {
-    for (LotFile::Building *building : mRemovedBuildingList) {
-        for (LotFile::Room *room : building->RoomList) {
-            for (LotFile::RoomRect *rr : room->rects) {
+    for (LotFile::Building *building : qAsConst(mRemovedBuildingList)) {
+        for (LotFile::Room *room : qAsConst(building->RoomList)) {
+            for (LotFile::RoomRect *rr : qAsConst(room->rects)) {
                 delete rr;
             }
             delete room;
@@ -1798,23 +1841,24 @@ uint LotFilesWorker256::cellToGid(const Cell *cell)
 #endif
 }
 
-bool LotFilesWorker256::processObjectGroups(CombinedCellMaps &combinedMaps, WorldCell *cell, MapComposite *mapComposite)
+bool LotFilesWorker256::processObjectGroups(CombinedCellMaps &combinedMaps, MapComposite *mapComposite)
 {
-    for (Layer *layer : mapComposite->map()->layers()) {
-        if (ObjectGroup *og = layer->asObjectGroup()) {
-            if (!processObjectGroup(combinedMaps, cell, og, mapComposite->levelRecursive(), mapComposite->originRecursive()))
-                return false;
+    for (ObjectGroup *og : mapComposite->map()->objectGroups()) {
+        if (!processObjectGroup(combinedMaps, og, mapComposite->levelRecursive(), mapComposite->originRecursive())) {
+            return false;
         }
     }
 
-    for (MapComposite *subMap : mapComposite->subMaps())
-        if (!processObjectGroups(combinedMaps, cell, subMap))
+    for (MapComposite *subMap : mapComposite->subMaps()) {
+        if (!processObjectGroups(combinedMaps, subMap)) {
             return false;
+        }
+    }
 
     return true;
 }
 
-bool LotFilesWorker256::processObjectGroup(CombinedCellMaps &combinedMaps, WorldCell *cell, ObjectGroup *objectGroup, int levelOffset, const QPoint &offset)
+bool LotFilesWorker256::processObjectGroup(CombinedCellMaps &combinedMaps, ObjectGroup *objectGroup, int levelOffset, const QPoint &offset)
 {
     int level = objectGroup->level();
     level += levelOffset;
@@ -1850,17 +1894,18 @@ bool LotFilesWorker256::processObjectGroup(CombinedCellMaps &combinedMaps, World
 
         if (objectGroup->name().contains(QLatin1String("RoomDefs"))) {
             if (x < 0 || y < 0 || x + w > CELL_WIDTH || y + h > CELL_HEIGHT) {
+#if 0
                 x = qBound(0, x, CELL_WIDTH);
                 y = qBound(0, y, CELL_HEIGHT);
                 mError = tr("A RoomDef in cell %1,%2 overlaps cell boundaries.\nNear x,y=%3,%4")
                         .arg(cell->x()).arg(cell->y()).arg(x).arg(y);
                 return false;
+#endif
             }
             // Apply the MapComposite offset in the top-level map.
             x += offset1.x();
             y += offset1.y();
             LotFile::RoomRect *rr = new LotFile::RoomRect(name, x, y, level, w, h);
-            rr->mCell = cell;
             mRoomRects += rr;
             mRoomRectByLevel[level] += rr;
         }
@@ -1906,7 +1951,7 @@ CombinedCellMaps::~CombinedCellMaps()
     delete mapInfo;
 }
 
-bool CombinedCellMaps::startLoading(WorldDocument *worldDoc, int cell256X, int cell256Y)
+bool CombinedCellMaps::startLoading(WorldDocument *worldDoc, int cell256X, int cell256Y, WorldCellLotList &lotsOverlappingCellBounds)
 {
     const GenerateLotsSettings &lotSettings = worldDoc->world()->getGenerateLotsSettings();
     mCell256X = cell256X;
@@ -1921,6 +1966,7 @@ bool CombinedCellMaps::startLoading(WorldDocument *worldDoc, int cell256X, int c
     mCellsWidth = maxCell300X - minCell300X;
     mCellsHeight = maxCell300Y - minCell300Y;
     mCells.clear();
+    QSet<WorldCellLot*> addedLots;
     for (int cell300Y = minCell300Y; cell300Y < maxCell300Y; cell300Y++) {
         for (int cell300X = minCell300X; cell300X < maxCell300X; cell300X++) {
             WorldCell* cell = worldDoc->world()->cellAt(cell300X - lotSettings.worldOrigin.x(), cell300Y - lotSettings.worldOrigin.y());
@@ -1939,13 +1985,31 @@ bool CombinedCellMaps::startLoading(WorldDocument *worldDoc, int cell256X, int c
             for (WorldCellLot *lot : cell->lots()) {
                 if (MapInfo *info = MapManager::instance()->loadMap(lot->mapName(), QString(), true, MapManager::PriorityMedium)) {
                     mLoader.addMap(info);
-                } else {
-                    mError = MapManager::instance()->errorString();
-                    return false;
+                    addedLots += lot;
+                    continue;
                 }
+                mError = MapManager::instance()->errorString();
+                return false;
             }
             mCells += cell;
         }
+    }
+
+    for (WorldCellLot *lot : lotsOverlappingCellBounds) {
+        if (addedLots.contains(lot)) {
+            continue;
+        }
+        if (!lotOverlaps(lot, cell256X, cell256Y, lotSettings.worldOrigin)) {
+            continue;
+        }
+        mLotsOverlappingCellBounds += lot;
+        if (MapInfo *info = MapManager::instance()->loadMap(lot->mapName(), QString(), true, MapManager::PriorityMedium)) {
+            mLoader.addMap(info);
+            continue;
+        }
+        mError = MapManager::instance()->errorString();
+        return false;
+
     }
     return true;
 }
@@ -1962,16 +2026,28 @@ int CombinedCellMaps::checkLoading(WorldDocument *worldDoc)
     const GenerateLotsSettings &lotSettings = worldDoc->world()->getGenerateLotsSettings();
     MapInfo* mapInfo = getCombinedMap();
     mMapComposite = new MapComposite(mapInfo);
-    for (WorldCell* cell : mCells) {
+    for (WorldCell* cell : qAsConst(mCells)) {
         MapInfo *info = MapManager::instance()->mapInfo(cell->mapFilePath());
         QPoint cellPos((cell->x() + lotSettings.worldOrigin.x() - mMinCell300X) * CELL_WIDTH, (cell->y() + lotSettings.worldOrigin.y() - mMinCell300Y) * CELL_HEIGHT);
         MapComposite* subMap = mMapComposite->addMap(info, cellPos, 0);
         subMap->setLotFilesManagerMap(true);
+        mCellMaps += subMap;
+    }
+    for (WorldCell* cell : qAsConst(mCells)) {
+        QPoint cellPos((cell->x() + lotSettings.worldOrigin.x() - mMinCell300X) * CELL_WIDTH, (cell->y() + lotSettings.worldOrigin.y() - mMinCell300Y) * CELL_HEIGHT);
         for (WorldCellLot *lot : cell->lots()) {
             MapInfo *info = MapManager::instance()->mapInfo(lot->mapName());
-            subMap->addMap(info, lot->pos(), lot->level());
+            mMapComposite->addMap(info, lot->pos() + cellPos, lot->level());
         }
     }
+#if 1
+    for (WorldCellLot *lot : qAsConst(mLotsOverlappingCellBounds)) {
+        MapInfo *info = MapManager::instance()->mapInfo(lot->mapName());
+        WorldCell *cell = lot->cell();
+        QPoint cellPos((cell->x() + lotSettings.worldOrigin.x() - mMinCell300X) * CELL_WIDTH, (cell->y() + lotSettings.worldOrigin.y() - mMinCell300Y) * CELL_HEIGHT);
+        mMapComposite->addMap(info, lot->pos() + cellPos, lot->level());
+    }
+#endif
     mMapComposite->synch(); //
     return 1;
 }
@@ -1991,6 +2067,13 @@ void CombinedCellMaps::moveToThread(MapComposite *mapComposite, QThread *thread)
     for (MapComposite *subMap : mapComposite->subMaps()) {
         moveToThread(subMap, thread);
     }
+}
+
+bool CombinedCellMaps::lotOverlaps(WorldCellLot *lot, int cell256X, int cell256Y, const QPoint &worldOrigin)
+{
+    QRect lotBounds(lot->x() + (worldOrigin.x() + lot->cell()->x()) * CELL_WIDTH, lot->y() + (worldOrigin.y() + lot->cell()->y()) * CELL_HEIGHT, lot->width(), lot->height());
+    QRect cellBounds(cell256X * CELL_SIZE_256, cell256Y * CELL_SIZE_256, CELL_SIZE_256, CELL_SIZE_256);
+    return lotBounds.intersects(cellBounds);
 }
 
 QRect CombinedCellMaps::toCellRect256(const QRect &cellRect300)

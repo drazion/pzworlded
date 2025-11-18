@@ -20,6 +20,7 @@
 
 #include "lotfilesmanager.h"
 #include "threads.h"
+#include "worldcell.h"
 
 #include <QTimer>
 
@@ -35,10 +36,11 @@ public:
     CombinedCellMaps();
     ~CombinedCellMaps();
 
-    bool startLoading(WorldDocument *worldDoc, int cell256X, int cell256Y);
+    bool startLoading(WorldDocument *worldDoc, int cell256X, int cell256Y, WorldCellLotList &lotsOverlappingCellBounds);
     int checkLoading(WorldDocument *worldDoc);
     MapInfo* getCombinedMap();
     void moveToThread(MapComposite *mapComposite, QThread *thread);
+    bool lotOverlaps(WorldCellLot *lot, int cell256X, int cell256Y, const QPoint &worldOrigin);
 
     static QRect toCellRect256(const QRect& cellRect300);
     static QRect toCellRect300(const QRect& cellRect256);
@@ -50,8 +52,10 @@ public:
     int mCellsWidth;
     int mCellsHeight;
     QList<WorldCell*> mCells;
+    WorldCellLotList mLotsOverlappingCellBounds;
     DelayedMapLoader mLoader;
     MapComposite* mMapComposite = nullptr;
+    QList<MapComposite*> mCellMaps;
     QString mError;
 };
 
@@ -83,8 +87,8 @@ public:
     bool handleTileset(const Tiled::Tileset *tileset, uint &firstGid);
     int getRoomID(int x, int y, int z);
     uint cellToGid(const Tiled::Cell *cell);
-    bool processObjectGroups(CombinedCellMaps &combinedMaps, WorldCell *cell, MapComposite *mapComposite);
-    bool processObjectGroup(CombinedCellMaps &combinedMaps,WorldCell *cell, Tiled::ObjectGroup *objectGroup, int levelOffset, const QPoint &offset);
+    bool processObjectGroups(CombinedCellMaps &combinedMaps, MapComposite *mapComposite);
+    bool processObjectGroup(CombinedCellMaps &combinedMaps, Tiled::ObjectGroup *objectGroup, int levelOffset, const QPoint &offset);
     void resolveProperties(PropertyHolder *ph, PropertyList &result);
 
 //    const QString tr(const char *str) const;
@@ -170,6 +174,8 @@ private:
     explicit LotFilesManager256(QObject *parent = nullptr);
     ~LotFilesManager256();
 
+    void collectLotsOverlappingCellBounds();
+
     void startThreads(int numberOfThreads);
     void stopThreads();
     void updateWorkers();
@@ -183,6 +189,7 @@ private:
     QImage ZombieSpawnMap;
     QList<const JumboZone*> mJumboZoneList;
     QRect mCellBounds256;
+    WorldCellLotList mLotsOverlappingCellBounds;
     QSet<QPair<int, int>> mDoneCells256;
     struct CellJob
     {
