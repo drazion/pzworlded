@@ -148,7 +148,7 @@ void CellMiniMapItem::paint(QPainter *painter,
     Q_UNUSED(option)
 
     QVector<const LotImage*> lotImages;
-    for (const LotImage &lotImage : mLotImages) {
+    for (const LotImage &lotImage : qAsConst(mLotImages)) {
         if (!lotImage.mMapImage || lotImage.mLevel >= 0)
             continue;
         lotImages += &lotImage;
@@ -156,7 +156,7 @@ void CellMiniMapItem::paint(QPainter *painter,
     std::sort(lotImages.begin(), lotImages.end(), [](const LotImage *lotImage1, const LotImage *lotImage2) {
         return lotImage1->mBounds.bottom() > lotImage2->mBounds.bottom();
     });
-    for (const LotImage *lotImage : lotImages) {
+    for (const LotImage *lotImage : qAsConst(lotImages)) {
         paintLotImage(painter, *lotImage);
     }
 
@@ -167,7 +167,7 @@ void CellMiniMapItem::paint(QPainter *painter,
     }
 
     lotImages.clear();
-    for (const LotImage &lotImage : mLotImages) {
+    for (const LotImage &lotImage : qAsConst(mLotImages)) {
         if (!lotImage.mMapImage || lotImage.mLevel < 0)
             continue;
         lotImages += &lotImage;
@@ -175,7 +175,7 @@ void CellMiniMapItem::paint(QPainter *painter,
     std::sort(lotImages.begin(), lotImages.end(), [](const LotImage *lotImage1, const LotImage *lotImage2) {
         return lotImage1->mBounds.bottom() > lotImage2->mBounds.bottom();
     });
-    for (const LotImage *lotImage : lotImages) {
+    for (const LotImage *lotImage : qAsConst(lotImages)) {
         paintLotImage(painter, *lotImage);
     }
 }
@@ -2944,7 +2944,7 @@ void ObjectItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWid
 #if 1
             if (mPolylineOutline.isEmpty())
                 break;
-            for (const QPointF& op : mPolylineOutline) {
+            for (const QPointF& op : qAsConst(mPolylineOutline)) {
                 screenPolygon2 += mRenderer->tileToPixelCoords(op + mDragOffset, mObject->level());
             }
             screenPolygon2 += screenPolygon2[0];
@@ -4605,7 +4605,7 @@ void CellScene::setTool(AbstractTool *tool)
         worldDocument()->setSelectedRoads(QList<Road*>());
 
     if (mActiveTool != EditPolygonObjectTool::instancePtr()) {
-        for (ObjectItem* item : mObjectItems){
+        for (ObjectItem* item : qAsConst(mObjectItems)){
             item->setEditable(false);
         }
     }
@@ -4623,7 +4623,7 @@ void CellScene::setTool(AbstractTool *tool)
         }
     }
 
-    for (SubMapItem *item : mSubMapItems) {
+    for (SubMapItem *item : qAsConst(mSubMapItems)) {
         int currentLevel = mDocument->currentLevel();
         bool visible = item->subMap()->isVisible()
                 && mDocument->isLotLevelVisible(currentLevel)
@@ -5122,6 +5122,7 @@ void CellScene::loadMap()
     }
 
     mMapComposite = new MapComposite(mMapInfo, Map::LevelIsometric);
+    mMapComposite->setCellMap(true);
 
     mRenderer->setMinLevel(mMapComposite->minLevel());
     mRenderer->setMaxLevel(mMapComposite->maxLevel());
@@ -5203,8 +5204,9 @@ void CellScene::cellAdded(WorldCell *_cell)
     int x = _cell->x() - cell()->x();
     int y = _cell->y() - cell()->y();
     if (QRect(-1, -1, 3, 3).contains(x, y)) {
-        if (!mMapComposite->adjacentMap(x, y))
+        if (!mMapComposite->adjacentMap(x, y)) {
             mAdjacentMaps += new AdjacentMap(this, _cell);
+        }
     }
 }
 
@@ -5215,7 +5217,7 @@ void CellScene::cellAboutToBeRemoved(WorldCell *_cell)
         if (_cell == am->cell()) {
             int x = am->cell()->x() - cell()->x();
             int y = am->cell()->y() - cell()->y();
-            mMapComposite->setAdjacentMap(x, y, 0);
+            mMapComposite->setAdjacentMap(x, y, nullptr);
             delete mAdjacentMaps.takeAt(i);
             doLater(AllGroups | Bounds | Synch | ZOrder);
             --i;
@@ -5554,16 +5556,18 @@ void CellScene::selectedObjectsChanged()
     const QList<WorldCellObject*> &selection = document()->selectedObjects();
 
     QSet<ObjectItem*> items;
-    foreach (WorldCellObject *obj, selection)
+    for (WorldCellObject *obj : selection)
         items.insert(itemForObject(obj));
 
-    foreach (ObjectItem *item, mSelectedObjectItems - items) {
+    const QSet<ObjectItem*> newlyDeselected = mSelectedObjectItems - items;
+    for (ObjectItem *item : newlyDeselected) {
         item->setSelected(false);
         item->setEditable(false);
     }
 
     bool editable = SelectMoveObjectTool::instance()->isCurrent();
-    foreach (ObjectItem *item, items - mSelectedObjectItems) {
+    const QSet<ObjectItem*> newlySelected = items - mSelectedObjectItems;
+    for (ObjectItem *item : newlySelected) {
         item->setSelected(true);
         item->setEditable(editable);
     }
@@ -5575,7 +5579,7 @@ void CellScene::selectedObjectsChanged()
 
 void CellScene::selectedObjectPointsChanged()
 {
-    for (auto objectItem : mSelectedObjectItems) {
+    for (auto objectItem : qAsConst(mSelectedObjectItems)) {
         objectItem->update();
     }
 }
@@ -6022,14 +6026,14 @@ void CellScene::synchAdjacentMapObjectItemVisibility()
 void CellScene::sortSubMaps()
 {
     QMap<int,SubMapItem*> zzz;
-    for (SubMapItem *item : mSubMapItems) {
+    for (SubMapItem *item : qAsConst(mSubMapItems)) {
         int index = cell()->indexOf(item->lot());
         zzz[index] = item;
     }
     mSubMapItems = zzz.values();
 
     QVector<MapComposite*> orderedMaps;
-    for (SubMapItem *item : mSubMapItems) {
+    for (SubMapItem *item : qAsConst(mSubMapItems)) {
         orderedMaps += item->subMap();
     }
     mMapComposite->sortSubMaps(orderedMaps);
@@ -6332,7 +6336,7 @@ void CellScene::mapLoaded(MapInfo *mapInfo)
 
             // Don't just call mSubMapItems.insert(), due to asynchronous loading.
             QMap<int,SubMapItem*> zzz;
-            for (SubMapItem *item : mSubMapItems) {
+            for (SubMapItem *item : qAsConst(mSubMapItems)) {
                 int index = cell()->indexOf(item->lot());
                 zzz[index] = item;
             }
@@ -6340,7 +6344,7 @@ void CellScene::mapLoaded(MapInfo *mapInfo)
             mSubMapItems = zzz.values();
 
             QVector<MapComposite*> orderedMaps;
-            for (SubMapItem *item : mSubMapItems) {
+            for (SubMapItem *item : qAsConst(mSubMapItems)) {
                 orderedMaps += item->subMap();
             }
             mMapComposite->sortSubMaps(orderedMaps);
@@ -6766,7 +6770,7 @@ void AdjacentMap::mapLoaded(MapInfo *mapInfo)
 
         qDeleteAll(mObjectItems);
         mObjectItems.clear();
-        foreach (WorldCellObject *obj, cell()->objects()) {
+        for (WorldCellObject *obj : qAsConst(cell()->objects())) {
             ObjectItem *item = scene()->newObjectItem(obj, mObjectItemParent);
             item->setAdjacent(true);
 //            scene()->addItem(item);
@@ -6878,7 +6882,7 @@ void AdjacentMap::sceneRectChanged()
         item->synchWithObject();
 
     mInGameMapFeatureParent->setPos(offset);
-    for (InGameMapFeatureItem *item : mInGameMapFeatureItems) {
+    for (InGameMapFeatureItem *item : qAsConst(mInGameMapFeatureItems)) {
         item->synchWithFeature();
 }
 }

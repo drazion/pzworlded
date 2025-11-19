@@ -212,7 +212,7 @@ bool PNGBuildingDialog::generateCell(WorldCell *cell)
         CompositeLayerGroup *layerGroup = mapComposite->layerGroupForLevel(0);
         if (layerGroup && !waterTiles.isEmpty()) {
             QVector<const Cell*> cells(40);
-            layerGroup->prepareDrawing2(false);
+            layerGroup->prepareDrawing2();
             QRgb waterColor = qRgb(0, 0, 255);
             for (int y = 0; y < mapInfo->map()->height(); y++) {
                 for (int x = 0; x < mapInfo->map()->width(); x++) {
@@ -241,7 +241,7 @@ bool PNGBuildingDialog::generateCell(WorldCell *cell)
             tilesets += ts;
     if (layerGroup && !tilesets.isEmpty()) {
         QVector<const Cell*> cells(40);
-        layerGroup->prepareDrawing2(false);
+        layerGroup->prepareDrawing2();
         QRgb treeColor = qRgb(47, 76, 64); // same dark green as MapImageManager uses
         if (ui->onlyTreesCheckBox->isChecked())
             treeColor = qRgb(255, 255, 255);

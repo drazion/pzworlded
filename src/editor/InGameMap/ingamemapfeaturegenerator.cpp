@@ -940,7 +940,7 @@ bool InGameMapFeatureGenerator::doWater(WorldCell *cell, MapInfo *mapInfo)
     const QRect bounds(QPoint(), mapInfo->map()->size());
 
     auto* layerGroup = mapComposite->layerGroupForLevel(0);
-    layerGroup->prepareDrawing2(false);
+    layerGroup->prepareDrawing2();
 
     ClipperLib::Clipper clipper;
     ClipperLib::Path path;
@@ -1066,7 +1066,7 @@ bool InGameMapFeatureGenerator::doTrees(WorldCell *cell, MapInfo *mapInfo)
     const QRect bounds(QPoint(), mapInfo->map()->size());
 
     auto* layerGroup = mapComposite->layerGroupForLevel(0);
-    layerGroup->prepareDrawing2(false);
+    layerGroup->prepareDrawing2();
 
     static QVector<const Tiled::Cell*> cells(40);
 

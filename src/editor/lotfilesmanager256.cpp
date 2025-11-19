@@ -932,7 +932,7 @@ bool LotFilesWorker256::generateCell()
     bool chunkDataOnly = false;
     if (chunkDataOnly) {
         for (CompositeLayerGroup *lg : mapComposite->layerGroups()) {
-            lg->prepareDrawing2(true);
+            lg->prepareDrawing2();
         }
         generateChunkData();
         clearRemovedBuildingsList();
@@ -963,7 +963,7 @@ bool LotFilesWorker256::generateCell()
                         CELL_SIZE_256, CELL_SIZE_256);
     QVector<const Tiled::Cell *> cells(40);
     for (CompositeLayerGroup *lg : mapComposite->layerGroups()) {
-        lg->prepareDrawing2(true);
+        lg->prepareDrawing2();
         int d = (mapInfo->orientation() == Map::Isometric) ? -3 : 0;
         d *= lg->level();
         for (int y = d; y < mapHeight; y++) {
@@ -2030,7 +2030,7 @@ int CombinedCellMaps::checkLoading(WorldDocument *worldDoc)
         MapInfo *info = MapManager::instance()->mapInfo(cell->mapFilePath());
         QPoint cellPos((cell->x() + lotSettings.worldOrigin.x() - mMinCell300X) * CELL_WIDTH, (cell->y() + lotSettings.worldOrigin.y() - mMinCell300Y) * CELL_HEIGHT);
         MapComposite* subMap = mMapComposite->addMap(info, cellPos, 0);
-        subMap->setLotFilesManagerMap(true);
+        subMap->setCellMap(true);
         mCellMaps += subMap;
     }
     for (WorldCell* cell : qAsConst(mCells)) {

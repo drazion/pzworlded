@@ -51,21 +51,30 @@ class MapComposite;
 struct OrderedCell
 {
     OrderedCell()
-        : layer(nullptr)
+        : layerGroup(nullptr)
+        , layerIndex(-1)
+        , layer(nullptr)
         , cell(nullptr)
+        , opacity(1.0)
     {
 
     }
 
-    OrderedCell(Tiled::TileLayer *layer, const Tiled::Cell *cell)
-        : layer(layer)
+    OrderedCell(const CompositeLayerGroup *layerGroup, int layerIndex, const Tiled::TileLayer *layer, const Tiled::Cell *cell, qreal opacity)
+        : layerGroup(layerGroup)
+        , layerIndex(layerIndex)
+        , layer(layer)
         , cell(cell)
+        , opacity(opacity)
     {
 
     }
 
-    Tiled::TileLayer *layer;
+    const CompositeLayerGroup *layerGroup;
+    int layerIndex;
+    const Tiled::TileLayer *layer;
     const Tiled::Cell *cell;
+    qreal opacity;
 };
 
 struct TilePlusLayer
@@ -143,22 +152,37 @@ public:
     void removeTileLayer(Tiled::TileLayer *layer);
 
     void prepareDrawing(const Tiled::MapRenderer *renderer, const QRect &rect);
+private:
+    void prepareDrawing(const Tiled::MapRenderer *renderer, const QRect &rect, CompositeLayerGroup *rootGroup);
+public:
     bool orderedCellsAt(const QPoint &pos, QVector<const Tiled::Cell*>& cells,
                         QVector<qreal> &opacities) const;
-
+private:
+    void orderedCellsAt(const QPoint &pos, const QRegion &suppressRgn, const QPoint &rootPos, QVector<OrderedCell> &cells);
+public:
     QRect bounds() const;
     QMargins drawMargins() const;
 
     QRectF boundingRect(const Tiled::MapRenderer *renderer) const;
 
-    void prepareDrawing2(bool bGenerateLots);
+    void prepareDrawing2();
+private:
+    void prepareDrawing2(CompositeLayerGroup *rootGroup);
+public:
     bool orderedCellsAt2(const QPoint &pos, QVector<const Tiled::Cell*>& cells) const;
+private:
     void orderedCellsAt2(const QPoint &pos, QVector<OrderedCell>& cells) const;
-
+public:
     void prepareDrawingNoBmpBlender(const Tiled::MapRenderer *renderer, const QRect &rect);
 
     void prepareDrawing3(const Tiled::MapRenderer *renderer, const QRect &rect);
+private:
+    void prepareDrawing3(const Tiled::MapRenderer *renderer, const QRect &rect, CompositeLayerGroup *rootGroup);
+public:
     bool orderedCellsAt3(const QPoint &pos, QVector<TilePlusLayer>& cells) const;
+private:
+    void orderedCellsAt3(const QPoint &pos, QVector<OrderedCell>& cells) const;
+public:
 
     bool setLayerVisibility(const QString &layerName, bool visible);
     bool setLayerVisibility(Tiled::TileLayer *tl, bool visible);
@@ -426,10 +450,10 @@ public:
     bool isAdjacentMap() const
     { return mIsAdjacentMap;/*mParent ? mParent->mAdjacentMaps.contains(this) : false;*/ }
 
-    void setLotFilesManagerMap(bool b)
-    { mIsLotFilesManagerMap = b; }
-    bool isLotFilesManagerMap() const
-    { return mIsLotFilesManagerMap; }
+    void setCellMap(bool b)
+    { mIsCellMap = b; }
+    bool isCellMap() const
+    { return mIsCellMap; }
 
     bool waitingForMapsToLoad() const;
 
@@ -497,7 +521,7 @@ private:
     bool mSavedShowBMPTiles;
     bool mSavedShowMapTiles;
     bool mIsAdjacentMap;
-    bool mIsLotFilesManagerMap;
+    bool mIsCellMap;
 
     Tiled::Internal::BmpBlender *mBmpBlender;
 

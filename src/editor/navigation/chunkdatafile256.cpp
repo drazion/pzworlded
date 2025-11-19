@@ -133,7 +133,7 @@ bool ChunkDataFile256::isPositionNull(MapComposite *mapComposite, int squareX, i
     QVector<const Tiled::Cell*> cells;
     for (int z = mapComposite->minLevel(); z <= mapComposite->maxLevel(); z++) {
         CompositeLayerGroup *layerGroup = mapComposite->layerGroupForLevel(z);
-        layerGroup->prepareDrawing2(true);
+        layerGroup->prepareDrawing2();
         cells.resize(0);
         layerGroup->orderedCellsAt2(QPoint(squareX, squareY), cells);
         if (cells.isEmpty() == false) {
