@@ -175,12 +175,13 @@ void LootWindow::examineMapComposite(MapComposite *mc)
     mLooseContainers.clear();
 
     static QVector<const Tiled::Cell*> cells(40);
+    OrderedCellsTemporaries vars;
     foreach (CompositeLayerGroup *lg, mc->sortedLayerGroups()) {
         lg->prepareDrawing2();
         for (int y = 0; y < mc->mapInfo()->height(); y++) {
             for (int x = 0; x < mc->mapInfo()->width(); x++) {
                 cells.resize(0);
-                lg->orderedCellsAt2(QPoint(x, y), cells);
+                lg->orderedCellsAt2(QPoint(x, y), vars, cells);
                 foreach (const Tiled::Cell *cell, cells) {
                     examineTile(x, y, lg->level(), cell->tile);
                 }

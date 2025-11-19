@@ -868,10 +868,12 @@ void LayerGroupVBO::paint2(QPainter *painter, Tiled::MapRenderer *renderer, cons
                         continue;
                     int x = (square.x() + 300) % VBO_SQUARES;
                     int y = (square.y() + 300) % VBO_SQUARES;
-                    if (tileFirst[x + y * VBO_SQUARES] == -1)
+                    const int tFirst = tileFirst[x + y * VBO_SQUARES];
+                    if (tFirst == -1)
                         continue;
-                    for (int i = tileFirst[x+y*VBO_SQUARES], n = i + tileCount[x+y*VBO_SQUARES]; i < n; i++) {
-                        if ((i > tileFirst[x+y*VBO_SQUARES]) && suppressRgn.contains(square))
+                    const int tCount = tileCount[x+y*VBO_SQUARES];
+                    for (int i = tFirst, n = i + tCount; i < n; i++) {
+                        if ((i > tFirst) && suppressRgn.contains(square))
                             continue;
                         GLuint start = i * 4;
                         GLuint end = start + 4 - 1;
@@ -886,6 +888,12 @@ void LayerGroupVBO::paint2(QPainter *painter, Tiled::MapRenderer *renderer, cons
                         if ((tile.mLayerIndex >= 0) && (tile.mLayerIndex < layerCount)) {
                             if (visibleLayers[tile.mLayerIndex] == false)
                                 continue;
+                            if ((tile.mSubMap != nullptr) && mapComposite->root()->showLotFloorsOnly()) {
+                                TileLayer *layer = mLayerGroup->layers().at(tile.mLayerIndex);
+                                if ((layer != nullptr) && (mLayerGroup->level() != 0 || layer->name() != QStringLiteral("Floor"))) {
+                                    continue;
+                                }
+                            }
                             if (opacity != layerOpacity[tile.mLayerIndex]) {
                                 glColor4f(1.f, 1.f, 1.f, opacity = layerOpacity[tile.mLayerIndex]);
                             }
@@ -1067,6 +1075,7 @@ void LayerGroupVBO::gatherTiles(Tiled::MapRenderer *renderer, const QRectF& expo
     Tile *missingTile = Internal::TilesetManager::instance()->missingTile();
 
     QVector<TilePlusLayer> cells(40); // or QVarLengthArray
+    OrderedCellsTemporaries3 vars;
 
     for (const QPoint& point : std::as_const(rasterize.mPoints)) {
         VBOTiles *vboTiles = getTilesFor(point * VBO_SQUARES, true);
@@ -1085,7 +1094,7 @@ void LayerGroupVBO::gatherTiles(Tiled::MapRenderer *renderer, const QRectF& expo
             for (int vx = 0; vx < VBO_SQUARES; vx++) {
                 QPoint square(vboTiles->mBounds.x() + vx, vboTiles->mBounds.y() + vy);
                 cells.resize(0);
-                if (layerGroup->orderedCellsAt3(square, cells) == false)
+                if (layerGroup->orderedCellsAt3(square, vars, cells) == false)
                     continue;
                 QPointF screenPos(screenOrigin.x() + (vx - vy) * tileWidth / 2, screenOrigin.y() + (vx + vy) * tileHeight / 2); // renderer->tileToPixelCoords(square + QPointF(0.5, 1.5), level);
                 for (int i = 0; i < cells.size(); i++) {
@@ -1434,7 +1443,26 @@ void CompositeLayerGroupItem::paint(QPainter *p, const QStyleOptionGraphicsItem 
 
     if (Preferences::instance()->useOpenGL()) {
         QRect exposed = option->exposedRect.toAlignedRect();
-exposed = QRect(); // FIXME: flush area covered by whole VBOTiles
+        // Flush area covered by whole VBOTiles
+        const int level = mLayerGroup->level();
+        qreal tileSize = VBO_SQUARES;
+        QPointF TL = mRenderer->pixelToTileCoords(exposed.topLeft(), level) / tileSize;
+        QPointF TR = mRenderer->pixelToTileCoords(exposed.topRight(), level) / tileSize;
+        QPointF BR = mRenderer->pixelToTileCoords(exposed.bottomRight(), level) / tileSize;
+        QPointF BL = mRenderer->pixelToTileCoords(exposed.bottomLeft(), level) / tileSize;
+        Rasterize rasterize;
+        rasterize.scanTriangle({TL.x(), TL.y()}, {TR.x(), TR.y()}, {BL.x(), BL.y()}, -VBO_PER_CELL, VBO_PER_CELL * 2);
+        rasterize.scanTriangle({TR.x(), TR.y()}, {BR.x(), BR.y()}, {BL.x(), BL.y()}, -VBO_PER_CELL, VBO_PER_CELL * 2);
+        exposed = QRect();
+        for (const QPoint &tileXY : qAsConst(rasterize.mPoints)) {
+            QRect tileRect(tileXY * tileSize, QSize(tileSize, tileSize));
+            if (exposed.isNull()) {
+                exposed = tileRect;
+            } else {
+                exposed |= tileRect;
+            }
+        }
+        exposed = mRenderer->tileToPixelCoords(exposed, level).boundingRect().toAlignedRect();
         if (exposed.isNull())
             exposed = mLayerGroup->boundingRect(mRenderer).toAlignedRect();
         mLayerGroup->prepareDrawing3(mRenderer, exposed);
@@ -5751,6 +5779,10 @@ void CellScene::showObjectNamesChanged(bool show)
 void CellScene::showLotFloorsOnlyChanged(bool show)
 {
     mapComposite()->setShowLotFloorsOnly(show);
+    if (Preferences::instance()->useOpenGL()) {
+        update(); // only repaint is required
+        return;
+    }
     for (CompositeLayerGroup *layerGroup : mapComposite()->layerGroups()) {
         layerGroup->setNeedsSynch(true);
     }
@@ -6097,6 +6129,25 @@ ObjectItem *CellScene::newObjectItem(WorldCellObject *obj, QGraphicsItem *parent
     return new ObjectItem(obj, this, parent);
 }
 
+void CellScene::lotFileChanged(WorldCellLot *lot)
+{
+    if (lot->cell() != cell() && lot->overlapsCell(cell())) {
+        mapComposite()->incrChangeCount(); // update VBOs
+    }
+    for (AdjacentMap *am : qAsConst(mAdjacentMaps)) {
+        if (lot->cell() == am->cell()) {
+            continue;
+        }
+        if (am->mapComposite() == nullptr) {
+            continue;
+        }
+        if (!lot->overlapsCell(am->cell())) {
+            continue;
+        }
+        am->mapComposite()->incrChangeCount(); // update VBOs
+    }
+}
+
 void CellScene::tilesetChanged(Tileset *tileset)
 {
     // Saw this was 0 when a map was loaded, probably during event processing
@@ -6398,6 +6449,8 @@ void CellScene::mapLoaded(MapInfo *mapInfo)
             sm.lot->setMapName(sm.mapInfo->path());
             sm.lot->setWidth(sm.mapInfo->width());
             sm.lot->setHeight(sm.mapInfo->height());
+
+            lotFileChanged(sm.lot);
 
             mSubMapsLoading.removeAt(i);
 
@@ -6887,6 +6940,8 @@ void AdjacentMap::mapLoaded(MapInfo *mapInfo)
                 scene()->mapCompositeNeedsSynch();
                 scene()->update(lotSceneBounds(sm.lot));
             }
+
+            scene()->lotFileChanged(sm.lot);
 
             mSubMapsLoading.removeAt(i);
 

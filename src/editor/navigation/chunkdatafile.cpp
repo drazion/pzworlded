@@ -44,13 +44,14 @@ void ChunkDataFile::fromMap(int cellX, int cellY, MapComposite *mapComposite, co
     int ROOM_CHUNK = 4;
 
     quint8 *bitsArray = new quint8[IsoChunk::WIDTH * IsoChunk::WIDTH];
+    TempVars vars;
 
     for (int yy = 0; yy < CHUNKS_PER_CELL; yy++) {
         for (int xx = 0; xx < CHUNKS_PER_CELL; xx++) {
             QRect chunkRect(xx * IsoChunk::WIDTH, yy * IsoChunk::WIDTH, IsoChunk::WIDTH, IsoChunk::WIDTH);
             QList<LotFile::RoomRect*> roomRects;
             roomRectLookup.overlapping(chunkRect, roomRects);
-            IsoChunk *chunk = new IsoChunk(xx, yy, mapComposite, roomRects);
+            IsoChunk *chunk = new IsoChunk(xx, yy, mapComposite, roomRects, vars);
             int empty = 0, solid = 0, water = 0, room = 0;
             for (int y = 0; y < IsoChunk::WIDTH; y++) {
                 for (int x = 0; x < IsoChunk::WIDTH; x++) {

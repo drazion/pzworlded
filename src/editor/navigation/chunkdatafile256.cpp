@@ -66,12 +66,14 @@ void ChunkDataFile256::fromMap(CombinedCellMaps &combinedMaps, MapComposite *map
     int cellMinX256 = combinedMaps.mCell256X * CELL_SIZE_256 - combinedMaps.mMinCell300X * CELL_WIDTH;
     int cellMinY256 = combinedMaps.mCell256Y * CELL_SIZE_256 - combinedMaps.mMinCell300Y * CELL_HEIGHT;
 
+    TempVars256 vars;
+
     for (int yy = 0; yy < CHUNKS_PER_CELL_256; yy++) {
         for (int xx = 0; xx < CHUNKS_PER_CELL_256; xx++) {
             QRect chunkRect(cellMinX256 + xx * CHUNK_SIZE_256, cellMinY256 + yy * CHUNK_SIZE_256, CHUNK_SIZE_256, CHUNK_SIZE_256);
             QList<LotFile::RoomRect*> roomRects;
             roomRectLookup.overlapping(QRect(xx * CHUNK_SIZE_256, yy * CHUNK_SIZE_256, CHUNK_SIZE_256, CHUNK_SIZE_256), roomRects);
-            IsoChunk256 *chunk = new IsoChunk256(xx, yy, chunkRect.x(), chunkRect.y(), mapComposite, roomRects);
+            IsoChunk256 *chunk = new IsoChunk256(xx, yy, chunkRect.x(), chunkRect.y(), mapComposite, roomRects, vars);
             int empty = 0, solid = 0, water = 0, room = 0, null = 0;
             for (int y = 0; y < CHUNK_SIZE_256; y++) {
                 for (int x = 0; x < CHUNK_SIZE_256; x++) {
@@ -131,11 +133,12 @@ void ChunkDataFile256::fromMap(CombinedCellMaps &combinedMaps, MapComposite *map
 bool ChunkDataFile256::isPositionNull(MapComposite *mapComposite, int squareX, int squareY)
 {
     QVector<const Tiled::Cell*> cells;
+    OrderedCellsTemporaries vars;
     for (int z = mapComposite->minLevel(); z <= mapComposite->maxLevel(); z++) {
         CompositeLayerGroup *layerGroup = mapComposite->layerGroupForLevel(z);
         layerGroup->prepareDrawing2();
         cells.resize(0);
-        layerGroup->orderedCellsAt2(QPoint(squareX, squareY), cells);
+        layerGroup->orderedCellsAt2(QPoint(squareX, squareY), vars, cells);
         if (cells.isEmpty() == false) {
             return false;
         }

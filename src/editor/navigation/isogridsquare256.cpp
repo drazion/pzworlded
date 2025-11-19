@@ -32,7 +32,7 @@ using namespace Navigate;
 
 QList<TileDefFile*> IsoGridSquare256::mTileDefFiles;
 
-IsoGridSquare256::IsoGridSquare256(int x, int y, int z, IsoChunk256 *chunk) :
+IsoGridSquare256::IsoGridSquare256(int x, int y, int z, IsoChunk256 *chunk, TempVars256 &vars) :
     x(x),
     y(y),
     z(z),
@@ -43,8 +43,8 @@ IsoGridSquare256::IsoGridSquare256(int x, int y, int z, IsoChunk256 *chunk) :
     mWater(false),
     mRoom(false)
 {
-    QVector<const Tiled::Cell *> cells;
-    mChunk->orderedCellsAt(x, y, cells);
+    QVector<const Tiled::Cell *> &cells = vars.cells;
+    mChunk->orderedCellsAt(x, y, vars.vars, cells);
 
     static const QString HoppableW(QLatin1String("HoppableW"));
     static const QString HoppableN(QLatin1String("HoppableN"));

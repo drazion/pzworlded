@@ -962,6 +962,7 @@ bool LotFilesWorker256::generateCell()
                         cell256Y * CELL_SIZE_256 - combinedMaps.mMinCell300Y * CELL_WIDTH,
                         CELL_SIZE_256, CELL_SIZE_256);
     QVector<const Tiled::Cell *> cells(40);
+    OrderedCellsTemporaries vars;
     for (CompositeLayerGroup *lg : mapComposite->layerGroups()) {
         lg->prepareDrawing2();
         int d = (mapInfo->orientation() == Map::Isometric) ? -3 : 0;
@@ -969,7 +970,7 @@ bool LotFilesWorker256::generateCell()
         for (int y = d; y < mapHeight; y++) {
             for (int x = d; x < mapWidth; x++) {
                 cells.resize(0);
-                lg->orderedCellsAt2(QPoint(x, y), cells);
+                lg->orderedCellsAt2(QPoint(x, y), vars, cells);
                 for (const Tiled::Cell *cell : std::as_const(cells)) {
                     if (cell->tile == missingTile) continue;
                     int lx = x, ly = y;

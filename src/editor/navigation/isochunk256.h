@@ -19,6 +19,7 @@
 #define ISOCHUNK256_H
 
 #include "lotfilesmanager256.h"
+#include "mapcomposite.h"
 
 namespace Tiled {
 class Cell;
@@ -30,10 +31,16 @@ namespace Navigate
 {
 class IsoGridSquare256;
 
+struct TempVars256
+{
+    QVector<const Tiled::Cell *> cells;
+    OrderedCellsTemporaries vars;
+};
+
 class IsoChunk256
 {
 public:
-    IsoChunk256(int xInCell, int yInCell, int minSquareX, int minSquareY, MapComposite *mapComposite, const QList<LotFile::RoomRect*> &roomRects);
+    IsoChunk256(int xInCell, int yInCell, int minSquareX, int minSquareY, MapComposite *mapComposite, const QList<LotFile::RoomRect*> &roomRects, TempVars256 &vars);
     ~IsoChunk256();
 
     IsoGridSquare256 *getGridSquare(int x, int y, int z);
@@ -45,7 +52,7 @@ public:
     int worldXMax() { return mMinSquareX + CHUNK_SIZE_256; }
     int worldYMax() { return mMinSquareY + CHUNK_SIZE_256; }
 
-    void orderedCellsAt(int x, int y, QVector<const Tiled::Cell *> &cells);
+    void orderedCellsAt(int x, int y, OrderedCellsTemporaries &vars, QVector<const Tiled::Cell *> &cells);
 
     int mMinSquareX;
     int mMinSquareY;

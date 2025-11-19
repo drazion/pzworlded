@@ -212,12 +212,13 @@ bool PNGBuildingDialog::generateCell(WorldCell *cell)
         CompositeLayerGroup *layerGroup = mapComposite->layerGroupForLevel(0);
         if (layerGroup && !waterTiles.isEmpty()) {
             QVector<const Cell*> cells(40);
+            OrderedCellsTemporaries vars;
             layerGroup->prepareDrawing2();
             QRgb waterColor = qRgb(0, 0, 255);
             for (int y = 0; y < mapInfo->map()->height(); y++) {
                 for (int x = 0; x < mapInfo->map()->width(); x++) {
                     cells.resize(0);
-                    if (layerGroup->orderedCellsAt2(QPoint(x, y), cells)) {
+                    if (layerGroup->orderedCellsAt2(QPoint(x, y), vars, cells)) {
                         for (const Cell *tileCell : cells) {
                             if (waterTiles.contains(tileCell->tile)) {
                                 mImage.setPixel(cell->x() * 300 + x, cell->y() * 300 + y, waterColor);
@@ -241,6 +242,7 @@ bool PNGBuildingDialog::generateCell(WorldCell *cell)
             tilesets += ts;
     if (layerGroup && !tilesets.isEmpty()) {
         QVector<const Cell*> cells(40);
+        OrderedCellsTemporaries vars;
         layerGroup->prepareDrawing2();
         QRgb treeColor = qRgb(47, 76, 64); // same dark green as MapImageManager uses
         if (ui->onlyTreesCheckBox->isChecked())
@@ -248,7 +250,7 @@ bool PNGBuildingDialog::generateCell(WorldCell *cell)
         for (int y = 0; y < mapInfo->map()->height(); y++) {
             for (int x = 0; x < mapInfo->map()->width(); x++) {
                 cells.resize(0);
-                if (layerGroup->orderedCellsAt2(QPoint(x, y), cells)) {
+                if (layerGroup->orderedCellsAt2(QPoint(x, y), vars, cells)) {
                     foreach (const Cell *tileCell, cells) {
                         if (tilesets.contains(tileCell->tile->tileset())) {
                             mImage.setPixel(cell->x() * 300 + x, cell->y() * 300 + y, treeColor);

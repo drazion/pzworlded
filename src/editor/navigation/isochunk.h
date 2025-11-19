@@ -2,6 +2,7 @@
 #define ISOCHUNK_H
 
 #include "lotfilesmanager.h"
+#include "mapcomposite.h"
 #include <QVector>
 
 namespace Tiled {
@@ -13,12 +14,18 @@ namespace Navigate {
 
 class IsoGridSquare;
 
+struct TempVars
+{
+    QVector<const Tiled::Cell *> cells;
+    OrderedCellsTemporaries vars;
+};
+
 class IsoChunk
 {
 public:
     static const int WIDTH = 10;
 
-    IsoChunk(int wx, int wy, MapComposite *mapComposite, const QList<LotFile::RoomRect*> &roomRects);
+    IsoChunk(int wx, int wy, MapComposite *mapComposite, const QList<LotFile::RoomRect*> &roomRects, TempVars &vars);
     ~IsoChunk();
 
     IsoGridSquare *getGridSquare(int x, int y, int z);
@@ -30,7 +37,7 @@ public:
     int worldXMax() { return (wx + 1) * WIDTH; }
     int worldYMax() { return (wy + 1) * WIDTH; }
 
-    void orderedCellsAt(int x, int y, QVector<const Tiled::Cell *> &cells);
+    void orderedCellsAt(int x, int y, OrderedCellsTemporaries &vars, QVector<const Tiled::Cell *> &cells);
 
     int wx;
     int wy;

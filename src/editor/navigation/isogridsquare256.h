@@ -26,11 +26,12 @@ class TileDefFile;
 namespace Navigate {
 
 class IsoChunk256;
+struct TempVars256;
 
 class IsoGridSquare256
 {
 public:
-    IsoGridSquare256(int x, int y, int z, IsoChunk256 *chunk);
+    IsoGridSquare256(int x, int y, int z, IsoChunk256 *chunk, TempVars256 &vars);
 
     bool isSolid();
     bool isBlockedWest();

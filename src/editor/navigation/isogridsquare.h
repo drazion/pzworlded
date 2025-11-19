@@ -10,11 +10,12 @@ class GenerateLotsSettings;
 namespace Navigate {
 
 class IsoChunk;
+struct TempVars;
 
 class IsoGridSquare
 {
 public:
-    IsoGridSquare(int x, int y, int z, IsoChunk *chunk);
+    IsoGridSquare(int x, int y, int z, IsoChunk *chunk, TempVars &vars);
 
     bool isSolid();
     bool isBlockedWest();

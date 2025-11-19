@@ -852,6 +852,8 @@ public:
 
     ObjectItem *newObjectItem(WorldCellObject *obj, QGraphicsItem *parent);
 
+    void lotFileChanged(WorldCellLot *lot);
+
 protected:
     void loadMap();
     void updateBordersItem();

@@ -23,7 +23,7 @@
 
 using namespace Navigate;
 
-IsoChunk256::IsoChunk256(int xInCell, int yInCell, int minSquareX, int minSquareY, MapComposite *mapComposite, const QList<LotFile::RoomRect *> &roomRects) :
+IsoChunk256::IsoChunk256(int xInCell, int yInCell, int minSquareX, int minSquareY, MapComposite *mapComposite, const QList<LotFile::RoomRect *> &roomRects, TempVars256 &vars) :
     mMinSquareX(minSquareX),
     mMinSquareY(minSquareY),
     mMapComposite(mapComposite)
@@ -31,7 +31,7 @@ IsoChunk256::IsoChunk256(int xInCell, int yInCell, int minSquareX, int minSquare
     int z = 0;
     for (int y = 0; y < CHUNK_SIZE_256; y++) {
         for (int x = 0; x < CHUNK_SIZE_256; x++) {
-            squares[x][y] = new IsoGridSquare256(mMinSquareX + x, mMinSquareY + y, z, this);
+            squares[x][y] = new IsoGridSquare256(mMinSquareX + x, mMinSquareY + y, z, this, vars);
         }
     }
 
@@ -83,7 +83,7 @@ bool IsoChunk256::containsWorldPos(int x, int y, int z)
     return x >= worldXMin() && x < worldXMax() && y >= worldYMin() && y < worldYMax();
 }
 
-void IsoChunk256::orderedCellsAt(int x, int y, QVector<const Tiled::Cell *> &cells)
+void IsoChunk256::orderedCellsAt(int x, int y, OrderedCellsTemporaries &vars, QVector<const Tiled::Cell *> &cells)
 {
-    mMapComposite->layerGroupForLevel(0)->orderedCellsAt2(QPoint(x, y), cells);
+    mMapComposite->layerGroupForLevel(0)->orderedCellsAt2(QPoint(x, y), vars, cells);
 }

@@ -946,10 +946,11 @@ bool InGameMapFeatureGenerator::doWater(WorldCell *cell, MapInfo *mapInfo)
     ClipperLib::Path path;
 
     static QVector<const Tiled::Cell*> cells(40);
+    OrderedCellsTemporaries vars;
 
     auto isWaterAt = [&](int x, int y) {
         cells.resize(0);
-        layerGroup->orderedCellsAt2({x, y}, cells);
+        layerGroup->orderedCellsAt2({x, y}, vars, cells);
         for (auto* cell : std::as_const(cells)) {
             if (cell->isEmpty())
                 continue;
@@ -1069,10 +1070,11 @@ bool InGameMapFeatureGenerator::doTrees(WorldCell *cell, MapInfo *mapInfo)
     layerGroup->prepareDrawing2();
 
     static QVector<const Tiled::Cell*> cells(40);
+    OrderedCellsTemporaries vars;
 
     auto isTreeAt = [&](int _x, int _y) {
         cells.resize(0);
-        layerGroup->orderedCellsAt2({_x, _y}, cells);
+        layerGroup->orderedCellsAt2({_x, _y}, vars, cells);
         for (auto* cell : std::as_const(cells)) {
             if (cell->isEmpty())
                 continue;

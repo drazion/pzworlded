@@ -14,7 +14,7 @@ using namespace Navigate;
 
 QList<TileDefFile*> IsoGridSquare::mTileDefFiles;
 
-IsoGridSquare::IsoGridSquare(int x, int y, int z, IsoChunk *chunk) :
+IsoGridSquare::IsoGridSquare(int x, int y, int z, IsoChunk *chunk, TempVars &vars) :
     x(x),
     y(y),
     z(z),
@@ -25,8 +25,8 @@ IsoGridSquare::IsoGridSquare(int x, int y, int z, IsoChunk *chunk) :
     mWater(false),
     mRoom(false)
 {
-    QVector<const Tiled::Cell *> cells;
-    mChunk->orderedCellsAt(x, y, cells);
+    QVector<const Tiled::Cell *> &cells = vars.cells;
+    mChunk->orderedCellsAt(x, y, vars.vars, cells);
 
     static const QString HoppableW(QLatin1String("HoppableW"));
     static const QString HoppableN(QLatin1String("HoppableN"));

@@ -114,9 +114,9 @@ LightSwitchOverlays::LightSwitchOverlays(CellScene *scene) :
     Tiled::Internal::TileDefWatcher *tileDefWatcher = BuildingEditor::getTileDefWatcher();
     tileDefWatcher->check();
     QString lightswitch(QLatin1String("lightswitch"));
-    for (Internal::TileDefWatcherFile *watcherFile : tileDefWatcher->mFiles) {
+    for (Internal::TileDefWatcherFile *watcherFile : qAsConst(tileDefWatcher->mFiles)) {
         for (TileDefTileset *ts : watcherFile->mTileDefFile->tilesets()) {
-            for (TileDefTile *tdt : ts->mTiles) {
+            for (TileDefTile *tdt : qAsConst(ts->mTiles)) {
                 for (const QString &key : tdt->mProperties.keys()) {
                     if (key == lightswitch) {
                         mTileDefTiles += tdt;
@@ -144,6 +144,7 @@ void LightSwitchOverlays::update()
     mOverlays.clear();
 
     QVector<const Cell*> cells(40);
+    OrderedCellsTemporaries vars;
 
 #if 0
     qDebug() << "CellSceneOverlays prepareDrawing2...";
@@ -186,7 +187,7 @@ void LightSwitchOverlays::update()
                 for (int y = rect->y; y < rect->y + rect->h; y++) {
                     for (int x = rect->x; x < rect->x + rect->w; x++) {
                         cells.clear();
-                        lg->orderedCellsAt2(QPoint(x, y), cells);
+                        lg->orderedCellsAt2(QPoint(x, y), vars, cells);
                         foreach (const Cell *cell, cells) {
                             Tile *tile = cell->tile;
                             if (!tile) continue;
@@ -332,7 +333,7 @@ SINGLETON_IMPL(LightbulbsMgr)
 
 LightbulbsMgr::LightbulbsMgr()
 {
-    if (QFileInfo(mFile.txtPath()).exists())
+    if (QFileInfo::exists(mFile.txtPath()))
         mFile.readTxt();
 }
 

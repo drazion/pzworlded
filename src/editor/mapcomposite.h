@@ -142,6 +142,21 @@ struct TilePlusLayer
     qreal mOpacity;
 };
 
+struct OrderedCellsTemporaries
+{
+    QVector<OrderedCell> orderedCells;
+    QVector<OrderedCell> cellsToKeep;
+    QVector<OrderedCell> aboveLotCells;
+};
+
+struct OrderedCellsTemporaries3
+{
+    QVector<OrderedCell> orderedCells;
+    QVector<TilePlusLayer> cellMapCells;
+    QVector<TilePlusLayer> buildingCells;
+    QVector<TilePlusLayer> aboveLotCells;
+};
+
 class CompositeLayerGroup : public Tiled::ZTileLayerGroup
 {
 public:
@@ -169,7 +184,7 @@ public:
 private:
     void prepareDrawing2(CompositeLayerGroup *rootGroup);
 public:
-    bool orderedCellsAt2(const QPoint &pos, QVector<const Tiled::Cell*>& cells) const;
+    bool orderedCellsAt2(const QPoint &pos, OrderedCellsTemporaries &vars, QVector<const Tiled::Cell*>& cells) const;
 private:
     void orderedCellsAt2(const QPoint &pos, QVector<OrderedCell>& cells) const;
 public:
@@ -179,7 +194,7 @@ public:
 private:
     void prepareDrawing3(const Tiled::MapRenderer *renderer, const QRect &rect, CompositeLayerGroup *rootGroup);
 public:
-    bool orderedCellsAt3(const QPoint &pos, QVector<TilePlusLayer>& cells) const;
+    bool orderedCellsAt3(const QPoint &pos, OrderedCellsTemporaries3 &vars, QVector<TilePlusLayer>& cells) const;
 private:
     void orderedCellsAt3(const QPoint &pos, QVector<OrderedCell>& cells) const;
 public:

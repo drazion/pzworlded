@@ -78,7 +78,15 @@ public:
     /**
      * Sets the name of this layer.
      */
+#ifdef ZOMBOID
+    void setName(const QString &name)
+    {
+        mName = name;
+        mNameWithPrefix = constructNameWithPrefix(mLevel, mName);
+    }
+#else
     void setName(const QString &name) { mName = name; }
+#endif
 
     QString nameWithPrefix() const;
 
@@ -160,7 +168,11 @@ public:
     QRect bounds() const { return QRect(mX, mY, mWidth, mHeight); }
 
 #ifdef ZOMBOID
-    void setLevel(int level) { mLevel = level; }
+    void setLevel(int level)
+    {
+        mLevel = level;
+        mNameWithPrefix = constructNameWithPrefix(mLevel, mName);
+    }
     int level() const { return mLevel; }
 #endif
 
@@ -228,6 +240,7 @@ public:
 
 protected:
     Layer *initializeClone(Layer *clone) const;
+    static QString constructNameWithPrefix(int level, const QString &name);
 
 #ifdef ZOMBOID
     void addReference(Tileset *ts);
@@ -243,6 +256,7 @@ protected:
     int mHeight;
 #ifdef ZOMBOID
     int mLevel;
+    QString mNameWithPrefix;
 #endif
     float mOpacity;
     bool mVisible;

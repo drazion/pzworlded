@@ -6,7 +6,7 @@
 
 using namespace Navigate;
 
-IsoChunk::IsoChunk(int wx, int wy, MapComposite *mapComposite, const QList<LotFile::RoomRect *> &roomRects) :
+IsoChunk::IsoChunk(int wx, int wy, MapComposite *mapComposite, const QList<LotFile::RoomRect *> &roomRects, TempVars &vars) :
     wx(wx),
     wy(wy),
     mMapComposite(mapComposite)
@@ -14,7 +14,7 @@ IsoChunk::IsoChunk(int wx, int wy, MapComposite *mapComposite, const QList<LotFi
     int z = 0;
     for (int y = 0; y < WIDTH; y++) {
         for (int x = 0; x < WIDTH; x++) {
-            squares[x][y] = new IsoGridSquare(wx * WIDTH + x, wy * WIDTH + y, z, this);
+            squares[x][y] = new IsoGridSquare(wx * WIDTH + x, wy * WIDTH + y, z, this, vars);
         }
     }
 
@@ -69,7 +69,7 @@ bool IsoChunk::containsWorldPos(int x, int y, int z)
     return x >= worldXMin() && x < worldXMax() && y >= worldYMin() && y < worldYMax();
 }
 
-void IsoChunk::orderedCellsAt(int x, int y, QVector<const Tiled::Cell *> &cells)
+void IsoChunk::orderedCellsAt(int x, int y, OrderedCellsTemporaries &vars, QVector<const Tiled::Cell *> &cells)
 {
-    mMapComposite->layerGroupForLevel(0)->orderedCellsAt2(QPoint(x, y), cells);
+    mMapComposite->layerGroupForLevel(0)->orderedCellsAt2(QPoint(x, y), vars, cells);
 }

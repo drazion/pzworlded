@@ -49,6 +49,7 @@ Layer::Layer(Type type, const QString &name, int x, int y,
     mHeight(height),
 #ifdef ZOMBOID
     mLevel(0),
+    mNameWithPrefix(constructNameWithPrefix(mLevel, mName)),
 #endif
     mOpacity(1.0f),
     mVisible(true),
@@ -58,7 +59,7 @@ Layer::Layer(Type type, const QString &name, int x, int y,
 
 QString Layer::nameWithPrefix() const
 {
-    return QLatin1String("%1_%2").arg(QString::number(level())).arg(mName);
+    return mNameWithPrefix; // QLatin1String("%1_%2").arg(QString::number(level())).arg(mName);
 }
 
 void Layer::resize(const QSize &size, const QPoint & /* offset */)
@@ -85,6 +86,7 @@ Layer *Layer::initializeClone(Layer *clone) const
     clone->setProperties(properties());
 #ifdef ZOMBOID
     clone->mLevel = mLevel;
+    clone->mNameWithPrefix = mNameWithPrefix;
     clone->mUsedTilesets = mUsedTilesets;
 #endif
     return clone;
@@ -123,5 +125,10 @@ void Layer::removeReference(Tileset *ts)
         if (mMap)
             mMap->removeTilesetUser(ts);
     }
+}
+
+QString Layer::constructNameWithPrefix(int level, const QString &name)
+{
+    return QStringLiteral("%1_%2").arg(QString::number(level)).arg(name);
 }
 #endif

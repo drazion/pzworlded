@@ -204,17 +204,13 @@ void CompositeLayerGroup::prepareDrawing(const MapRenderer *renderer, const QRec
 
 void CompositeLayerGroup::prepareDrawing(const MapRenderer *renderer, const QRect &rect, CompositeLayerGroup *rootGroup)
 {
-    if (mAnyVisibleLayers == false)
+    if (mAnyVisibleLayers == false) {
         return;
-    for (int index = 0; index < layerCount(); index++) {
-        if (!mVisibleLayers[index]) {
-            continue;
-        }
-        if (mOwner->isCellMap()) {
-            rootGroup->mPreparedSubMapLayers.append(SubMapLayers(mOwner, this));
-        } else {
-            rootGroup->mPreparedSubMapLayers2.append(SubMapLayers(mOwner, this));
-        }
+    }
+    if (mOwner->isCellMap()) {
+        rootGroup->mPreparedSubMapLayers.append(SubMapLayers(mOwner, this));
+    } else {
+        rootGroup->mPreparedSubMapLayers2.append(SubMapLayers(mOwner, this));
     }
     for (const SubMapLayers &subMapLayer : qAsConst(mVisibleSubMapLayers)) {
         CompositeLayerGroup *layerGroup = subMapLayer.mLayerGroup;
@@ -414,12 +410,10 @@ void CompositeLayerGroup::prepareDrawing2()
 
 void CompositeLayerGroup::prepareDrawing2(CompositeLayerGroup *rootGroup)
 {
-    for (int index = 0; index < layerCount(); index++) {
-        if (mOwner->isCellMap()) {
-            rootGroup->mPreparedSubMapLayers.append(SubMapLayers(mOwner, this));
-        } else {
-            rootGroup->mPreparedSubMapLayers2.append(SubMapLayers(mOwner, this));
-        }
+    if (mOwner->isCellMap()) {
+        rootGroup->mPreparedSubMapLayers.append(SubMapLayers(mOwner, this));
+    } else {
+        rootGroup->mPreparedSubMapLayers2.append(SubMapLayers(mOwner, this));
     }
     for (MapComposite *subMap : mOwner->subMaps()) {
         int levelOffset = subMap->levelOffset();
@@ -440,11 +434,14 @@ void CompositeLayerGroup::prepareDrawing2(CompositeLayerGroup *rootGroup)
 
 // This is for the benefit of LotFilesManager.  It ignores the visibility of
 // layers (so NoRender layers are included) and visibility of sub-maps.
-bool CompositeLayerGroup::orderedCellsAt2(const QPoint &pos, QVector<const Cell *> &cells) const
+bool CompositeLayerGroup::orderedCellsAt2(const QPoint &pos, OrderedCellsTemporaries &vars, QVector<const Cell *> &cells) const
 {
-    QVector<OrderedCell> orderedCells;
-    QVector<OrderedCell> cellsToKeep;
-    QVector<OrderedCell> aboveLotCells;
+    QVector<OrderedCell> &orderedCells = vars.orderedCells;
+    QVector<OrderedCell> &cellsToKeep = vars.cellsToKeep;
+    QVector<OrderedCell> &aboveLotCells = vars.aboveLotCells;
+
+    cellsToKeep.clear();
+    aboveLotCells.clear();
 
     // Get tiles from cell maps at this location
     for (const SubMapLayers& subMapLayer : qAsConst(mPreparedSubMapLayers)) {
@@ -577,12 +574,10 @@ void CompositeLayerGroup::prepareDrawing3(const Tiled::MapRenderer *renderer, co
 void CompositeLayerGroup::prepareDrawing3(const Tiled::MapRenderer *renderer, const QRect &rect, CompositeLayerGroup *rootGroup)
 {
     if ((boundingRect(renderer) & rect).isValid()) {
-        for (int index = 0; index < layerCount(); index++) {
-            if (mOwner->isCellMap()) {
-                rootGroup->mPreparedSubMapLayers.append(SubMapLayers(mOwner, this));
-            } else {
-                rootGroup->mPreparedSubMapLayers2.append(SubMapLayers(mOwner, this));
-            }
+        if (mOwner->isCellMap()) {
+            rootGroup->mPreparedSubMapLayers.append(SubMapLayers(mOwner, this));
+        } else {
+            rootGroup->mPreparedSubMapLayers2.append(SubMapLayers(mOwner, this));
         }
     }
     for (MapComposite *subMap : mOwner->subMaps()) {
@@ -590,8 +585,9 @@ void CompositeLayerGroup::prepareDrawing3(const Tiled::MapRenderer *renderer, co
         CompositeLayerGroup *layerGroup = subMap->tileLayersForLevel(mLevel - levelOffset);
         if (layerGroup) {
             QRectF bounds = layerGroup->boundingRect(renderer);
-            if ((bounds & rect).isValid() == false)
+            if ((bounds & rect).isValid() == false) {
                 continue;
+            }
             if (subMap->isCellMap()) {
                 rootGroup->mPreparedSubMapLayers.append(SubMapLayers(subMap, layerGroup));
             } else {
@@ -605,11 +601,14 @@ void CompositeLayerGroup::prepareDrawing3(const Tiled::MapRenderer *renderer, co
     }
 }
 
-bool CompositeLayerGroup::orderedCellsAt3(const QPoint &pos, QVector<TilePlusLayer> &cells) const
+bool CompositeLayerGroup::orderedCellsAt3(const QPoint &pos, OrderedCellsTemporaries3 &vars, QVector<TilePlusLayer> &cells) const
 {
-    QVector<OrderedCell> orderedCells;
-    QVector<TilePlusLayer> cellMapCells;
-    QVector<TilePlusLayer> aboveLotCells;
+    QVector<OrderedCell> &orderedCells = vars.orderedCells;
+    QVector<TilePlusLayer> &cellMapCells = vars.cellMapCells;
+    QVector<TilePlusLayer> &aboveLotCells = vars.aboveLotCells;
+
+    cellMapCells.clear();
+    aboveLotCells.clear();
 
     // Get tiles from cell maps at this location
     for (const SubMapLayers& subMapLayer : qAsConst(mPreparedSubMapLayers)) {
@@ -637,7 +636,8 @@ bool CompositeLayerGroup::orderedCellsAt3(const QPoint &pos, QVector<TilePlusLay
         }
     }
 
-    QVector<TilePlusLayer> buildingCells;
+    QVector<TilePlusLayer> &buildingCells = vars.buildingCells;
+    buildingCells.clear();
 
     // Get tiles from buildings at this location
     for (const SubMapLayers& subMapLayer : qAsConst(mPreparedSubMapLayers2)) {
@@ -703,7 +703,7 @@ bool CompositeLayerGroup::orderedCellsAt3(const QPoint &pos, QVector<TilePlusLay
         for (int i = 0; i < cellMapCells.size(); i++) {
             const TilePlusLayer& cell = cellMapCells.at(i);
             int p = cell.mLayerName.indexOf(QLatin1Char('_')) + 1; // strip N_ level prefix
-            QString layerNameWithoutPrefix = cell.mLayerName.mid(p);
+            QStringRef layerNameWithoutPrefix = cell.mLayerName.midRef(p);
             bool isFloor = layerNameWithoutPrefix.startsWith(sFloor);
             bool isWall = layerNameWithoutPrefix.startsWith(QStringLiteral("Wall"));
             bool isOther = (isFloor || isWall) == false;
@@ -748,12 +748,14 @@ void CompositeLayerGroup::orderedCellsAt3(const QPoint &pos, QVector<OrderedCell
         }
 #endif // ROAD_CRUD
         const Cell *cell = &tl->cellAt(subPos);
+#if 0
         if (!mOwner->isCellMap() && root->showLotFloorsOnly()) {
             bool isFloor = !mLevel && !index && (tl->name() == sFloor);
             if (!isFloor && !tl->name().contains(sAboveLot)) {
                 continue;
             }
         }
+#endif
         TileLayer *tlBmpBlend = mBmpBlendLayers[index];
         MapNoBlend *noBlend = mNoBlends[index];
         if (tlBmpBlend != nullptr && tlBmpBlend->contains(subPos) && !tlBmpBlend->cellAt(subPos).isEmpty()) {
@@ -1835,7 +1837,7 @@ void MapComposite::setAdjacentMap(int x, int y, MapInfo *mapInfo)
         mAdjacentMaps.resize(9);
     if (mAdjacentMaps[index]) {
         removeMap(mAdjacentMaps[index]);
-        mAdjacentMaps[index] = 0;
+        mAdjacentMaps[index] = nullptr;
     }
     if (!mapInfo)
         return;
