@@ -69,9 +69,13 @@ public:
     void setHeight(int height) { mHeight = height; }
     int width() const { return mWidth; }
     int height() const { return mHeight; }
+    QSize size() const { return QSize(width(), height()); }
 
     QRect bounds() const
     { return QRect(mX, mY, mWidth, mHeight); }
+
+    bool overlapsCell(WorldCell *cell1) const;
+    bool overlapsCell(WorldCell *cell1, const QPoint &lotPos) const;
 
 private:
     QString mName;
@@ -421,6 +425,8 @@ public:
 
     QPoint pos() const { return QPoint(mX, mY); }
     QPoint displayPos() const;
+
+    QRect bounds() const { return QRect(x() * 300, y() * 300, 300, 300); }
 
     World *world() const { return mWorld; }
 

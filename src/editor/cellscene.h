@@ -557,6 +557,9 @@ public:
     WorldCell *cell() const
     { return mCell; }
 
+    MapComposite *mapComposite()
+    { return mMapComposite; }
+
     ObjectItem *itemForObject(WorldCellObject *obj);
     InGameMapFeatureItem *itemForFeature(InGameMapFeature *feature);
 
@@ -572,7 +575,7 @@ private slots:
 
     void cellLotAdded(WorldCell *cell, int index);
     void cellLotAboutToBeRemoved(WorldCell *cell, int index);
-    void cellLotMoved(WorldCellLot *lot);
+    void cellLotMoved2(WorldCellLot *lot, const QPoint &oldPos);
     void lotLevelChanged(WorldCellLot *lot);
     void cellLotReordered(WorldCellLot *lot);
 
@@ -856,13 +859,14 @@ protected:
     bool shouldObjectItemBeVisible(ObjectItem *item);
     void synchAdjacentMapObjectItemVisibility();
     void sortSubMaps();
+    bool lotOverlapsCellOrAdjacent(WorldCellLot *lot) const;
 
     typedef Tiled::Tileset Tileset;
 signals:
     void mapContentsChanged();
 
 public slots:
-    void tilesetChanged(Tileset *tileset);
+    void tilesetChanged(Tiled::Tileset *tileset);
 
     bool mapAboutToChange(MapInfo *mapInfo);
     bool mapChanged(MapInfo *mapInfo);
@@ -877,7 +881,7 @@ public slots:
 
     void cellLotAdded(WorldCell *cell, int index);
     void cellLotAboutToBeRemoved(WorldCell *cell, int index);
-    void cellLotMoved(WorldCellLot *lot);
+    void cellLotMoved2(WorldCellLot *lot, const QPoint &oldPos);
     void lotLevelChanged(WorldCellLot *lot);
     void selectedLotsChanged();
     void cellLotReordered(WorldCellLot *lot);

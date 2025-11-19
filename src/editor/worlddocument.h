@@ -204,6 +204,7 @@ signals:
     void cellLotAdded(WorldCell *cell, int index);
     void cellLotAboutToBeRemoved(WorldCell *cell, int index);
     void cellLotMoved(WorldCellLot *lot);
+    void cellLotMoved2(WorldCellLot *lot, const QPoint &oldPos);
     void lotLevelChanged(WorldCellLot *lot);
     void cellLotReordered(WorldCellLot *lot);
 
@@ -501,6 +502,7 @@ signals:
     void cellLotAdded(WorldCell *cell, int index);
     void cellLotAboutToBeRemoved(WorldCell *cell, int index);
     void cellLotMoved(WorldCellLot *lot);
+    void cellLotMoved2(WorldCellLot *lot, const QPoint &oldPos);
     void lotLevelChanged(WorldCellLot *lot);
     void cellLotReordered(WorldCellLot *object);
 

@@ -235,8 +235,8 @@ void CompositeLayerGroup::prepareDrawing(const MapRenderer *renderer, const QRec
     }
 }
 
-static QLatin1String sFloor("Floor"); // FIXME: thread safe?
-static QLatin1String sAboveLot("AboveLot");
+static QString sFloor = QStringLiteral("Floor");
+static QString sAboveLot = QStringLiteral("AboveLot");
 
 bool CompositeLayerGroup::orderedCellsAt(const QPoint &pos,
                                          QVector<const Cell *> &cells,
@@ -1807,8 +1807,9 @@ QList<Tileset *> MapComposite::usedTilesets()
     QSet<Tileset*> usedTilesets;
     foreach (MapComposite *mc, maps()) {
         usedTilesets += mc->map()->usedTilesets();
-        foreach (TileLayer *tl, mc->mBmpBlender->tileLayers())
+        foreach (TileLayer *tl, mc->mBmpBlender->tileLayers()) {
             usedTilesets += tl->usedTilesets();
+        }
     }
     return usedTilesets.values();
 }

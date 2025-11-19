@@ -669,7 +669,7 @@ void LayerGroupVBO::paint2(QPainter *painter, Tiled::MapRenderer *renderer, cons
 #endif
     }
 
-    for (VBOTiles *vboTiles : std::as_const(exposedTiles)) {
+    for (VBOTiles *vboTiles : qAsConst(exposedTiles)) {
 //        VBOTiles *vboTiles = mTiles[vxy.x() + vxy.y() * VBO_PER_CELL];
 //        if (vboTiles == nullptr)
 //            continue;
@@ -1052,6 +1052,12 @@ void LayerGroupVBO::gatherTiles(Tiled::MapRenderer *renderer, const QRectF& expo
     rasterize.scanTriangle({TR.x(), TR.y()}, {BR.x(), BR.y()}, {BL.x(), BL.y()}, -VBO_PER_CELL, VBO_PER_CELL * 2);
 
     auto* layerGroup = mLayerGroup;
+#if 1
+    CompositeLayerGroup *rootGroup = mLayerGroup->owner()->root()->tileLayersForLevel(mLayerGroup->level());
+    if (rootGroup != nullptr) {
+        layerGroup = rootGroup; // so we get overlapping buildings
+    }
+#endif
 
     const int tileWidth = DISPLAY_TILE_WIDTH;
     const int tileHeight = DISPLAY_TILE_HEIGHT;
@@ -4657,7 +4663,7 @@ void CellScene::setDocument(CellDocument *doc)
 
     connect(worldDocument(), &WorldDocument::cellLotAdded, this, &CellScene::cellLotAdded);
     connect(worldDocument(), &WorldDocument::cellLotAboutToBeRemoved, this, &CellScene::cellLotAboutToBeRemoved);
-    connect(worldDocument(), &WorldDocument::cellLotMoved, this, &CellScene::cellLotMoved);
+    connect(worldDocument(), &WorldDocument::cellLotMoved2, this, &CellScene::cellLotMoved2);
     connect(worldDocument(), &WorldDocument::lotLevelChanged, this, &CellScene::lotLevelChanged);
     connect(worldDocument(), &WorldDocument::cellLotReordered, this, &CellScene::cellLotReordered);
     connect(mDocument, &CellDocument::selectedLotsChanged, this, &CellScene::selectedLotsChanged);
@@ -5091,7 +5097,7 @@ void CellScene::loadMap()
     // Add any missing default tile layers so the user can hide/show them in the Layers Dock.
     // FIXME: mMap is shared, is this safe?
     for (int level = MIN_WORLD_LEVEL; level <= MAX_WORLD_LEVEL; level++) {
-        QStringList defaultLayerNames = BuildingEditor::BuildingTMX::instance()->tileLayerNamesForLevel(level);
+        const QStringList defaultLayerNames = BuildingEditor::BuildingTMX::instance()->tileLayerNamesForLevel(level);
         for (const QString& layerName : defaultLayerNames) {
             QString withoutPrefix = MapComposite::layerNameWithoutPrefix(layerName);
             QString withPrefix = QStringLiteral("%1_%2").arg(level).arg(withoutPrefix);
@@ -5155,7 +5161,7 @@ void CellScene::loadMap()
         mRoadItems += item;
     }
 
-    for (auto* feature : cell()->inGameMap().mFeatures) {
+    for (auto* feature : qAsConst(cell()->inGameMap().mFeatures)) {
         InGameMapFeatureItem* item = new InGameMapFeatureItem(feature, this);
         item->setZValue(ZVALUE_ROADITEM_UNSELECTED);
         addItem(item);
@@ -5237,44 +5243,56 @@ void CellScene::cellContentsChanged()
 
 void CellScene::cellLotAdded(WorldCell *_cell, int index)
 {
-    if (_cell == cell()) {
-        WorldCellLot *lot = cell()->lots().at(index);
-        MapInfo *subMapInfo = MapManager::instance()->loadMap(
-                    lot->mapName(), QString(), true, MapManager::PriorityLow);
-        if (!subMapInfo) {
-            qDebug() << "failed to load lot map" << lot->mapName() << "in map" << mMapInfo->path();
-            subMapInfo = MapManager::instance()->getPlaceholderMap(lot->mapName(), lot->width(), lot->height());
+    WorldCellLot *lot = _cell->lots().at(index);
+    if (_cell != cell()) {
+        if (lot->overlapsCell(cell())) {
+            mMapComposite->incrChangeCount(); // update VBOs if the lot overlaps this cell
         }
-        if (subMapInfo) {
-            mSubMapsLoading += LoadingSubMap(lot, subMapInfo);
-            if (!subMapInfo->isLoading()) {
-                mapLoaded(subMapInfo);
-            }
+        return;
+    }
+    MapInfo *subMapInfo = MapManager::instance()->loadMap(
+                lot->mapName(), QString(), true, MapManager::PriorityLow);
+    if (!subMapInfo) {
+        qDebug() << "failed to load lot map" << lot->mapName() << "in map" << mMapInfo->path();
+        subMapInfo = MapManager::instance()->getPlaceholderMap(lot->mapName(), lot->width(), lot->height());
+    }
+    if (subMapInfo) {
+        mSubMapsLoading += LoadingSubMap(lot, subMapInfo);
+        if (!subMapInfo->isLoading()) {
+            mapLoaded(subMapInfo);
         }
     }
 }
 
 void CellScene::cellLotAboutToBeRemoved(WorldCell *_cell, int index)
 {
-    if (_cell == cell()) {
-        WorldCellLot *lot = cell()->lots().at(index);
-        SubMapItem *item = itemForLot(lot);
-        if (item) {
-            mMapComposite->removeMap(item->subMap());
-            mSubMapItems.removeAll(item);
-            mSelectedSubMapItems.remove(item);
-            doLater(AllGroups | Bounds | Synch | ZOrder | Paint);
-            removeItem(item);
-            delete item;
-            mMapBuildingsInvalid = true;
+    WorldCellLot *lot = _cell->lots().at(index);
+    if (_cell != cell()) {
+        if (lot->overlapsCell(cell())) {
+            mMapComposite->incrChangeCount(); // update VBOs if the lot overlaps this cell
         }
+        return;
+    }
+    SubMapItem *item = itemForLot(lot);
+    if (item) {
+        mMapComposite->removeMap(item->subMap());
+        mSubMapItems.removeAll(item);
+        mSelectedSubMapItems.remove(item);
+        doLater(AllGroups | Bounds | Synch | ZOrder | Paint);
+        removeItem(item);
+        delete item;
+        mMapBuildingsInvalid = true;
     }
 }
 
-void CellScene::cellLotMoved(WorldCellLot *lot)
+void CellScene::cellLotMoved2(WorldCellLot *lot, const QPoint &oldPos)
 {
-    if (lot->cell() != cell())
+    if (lot->cell() != cell()) {
+        if (lot->overlapsCell(cell(), oldPos) || lot->overlapsCell(cell())) {
+            mMapComposite->incrChangeCount(); // update VBOs if the lot now overlaps or used to overlap this cell
+        }
         return;
+    }
     if (SubMapItem *item = itemForLot(lot)) {
         mMapComposite->moveSubMap(item->subMap(), lot->pos());
         doLater(AllGroups | Bounds | Synch/* | Paint*/);
@@ -5285,8 +5303,12 @@ void CellScene::cellLotMoved(WorldCellLot *lot)
 
 void CellScene::lotLevelChanged(WorldCellLot *lot)
 {
-    if (lot->cell() != cell())
+    if (lot->cell() != cell()) {
+        if (lot->overlapsCell(cell())) {
+            mMapComposite->incrChangeCount(); // update VBOs if the lot overlaps this cell
+        }
         return;
+    }
     if (SubMapItem *item = itemForLot(lot)) {
 
         // When the level changes, the position also changes to keep
@@ -5295,6 +5317,8 @@ void CellScene::lotLevelChanged(WorldCellLot *lot)
 
         item->subMap()->setLevel(lot->level());
 //        item->subMapMoved(); // also called in synchLayerGroups()
+
+        mMapComposite->incrChangeCount();
 
         // Make sure there are enough layer-groups to display the submap
         int minLevel = lot->level() + item->subMap()->minLevel();
@@ -5500,7 +5524,7 @@ void CellScene::selectedInGameMapFeaturesChanged()
 
 void CellScene::selectedInGameMapPointsChanged()
 {
-    for (auto featureItem : mSelectedFeatureItems) {
+    for (auto featureItem : qAsConst(mSelectedFeatureItems)) {
         featureItem->update();
     }
 }
@@ -5730,6 +5754,14 @@ void CellScene::showLotFloorsOnlyChanged(bool show)
     for (CompositeLayerGroup *layerGroup : mapComposite()->layerGroups()) {
         layerGroup->setNeedsSynch(true);
     }
+#if 1
+    for (AdjacentMap *am : qAsConst(mAdjacentMaps)) {
+        for (CompositeLayerGroup *layerGroup : am->mapComposite()->layerGroups()) {
+            layerGroup->setNeedsSynch(true);
+        }
+        am->mapComposite()->synch(); // force VBO update
+    }
+#endif
     mapComposite()->synch(); // force VBO update
     update();
 }
@@ -6037,6 +6069,19 @@ void CellScene::sortSubMaps()
         orderedMaps += item->subMap();
     }
     mMapComposite->sortSubMaps(orderedMaps);
+}
+
+bool CellScene::lotOverlapsCellOrAdjacent(WorldCellLot *lot) const
+{
+    if (lot->overlapsCell(cell())) {
+        return true;
+    }
+    for (AdjacentMap *am : mAdjacentMaps) {
+        if (lot->overlapsCell(am->cell())) {
+            return true;
+        }
+    }
+    return false;
 }
 
 ObjectItem *CellScene::newObjectItem(WorldCellObject *obj, QGraphicsItem *parent)
@@ -6404,8 +6449,8 @@ AdjacentMap::AdjacentMap(CellScene *scene, WorldCell *cell) :
             this, &AdjacentMap::cellLotAdded);
     connect(worldDocument(), &WorldDocument::cellLotAboutToBeRemoved,
             this, &AdjacentMap::cellLotAboutToBeRemoved);
-    connect(worldDocument(), &WorldDocument::cellLotMoved,
-            this, &AdjacentMap::cellLotMoved);
+    connect(worldDocument(), &WorldDocument::cellLotMoved2,
+            this, &AdjacentMap::cellLotMoved2);
     connect(worldDocument(), &WorldDocument::lotLevelChanged,
             this, &AdjacentMap::lotLevelChanged);
     connect(worldDocument(), &WorldDocument::cellLotReordered,
@@ -6503,9 +6548,14 @@ void AdjacentMap::cellContentsChanged(WorldCell *_cell)
 
 void AdjacentMap::cellLotAdded(WorldCell *_cell, int index)
 {
-    if (_cell != cell()) return;
+    WorldCellLot *lot = _cell->lots().at(index);
+    if (_cell != cell()) {
+        if (lot->overlapsCell(cell())) {
+            mMapComposite->incrChangeCount(); // update VBOs if the lot overlaps this cell
+        }
+        return;
+    }
 
-    WorldCellLot *lot = cell()->lots().at(index);
     MapInfo *subMapInfo = MapManager::instance()->loadMap(
                 lot->mapName(), QString(), true, MapManager::PriorityLow);
     if (subMapInfo && !alreadyLoading(lot)) {
@@ -6517,9 +6567,14 @@ void AdjacentMap::cellLotAdded(WorldCell *_cell, int index)
 
 void AdjacentMap::cellLotAboutToBeRemoved(WorldCell *_cell, int index)
 {
-    if (_cell != cell()) return;
+    WorldCellLot *lot = _cell->lots().at(index);
+    if (_cell != cell()) {
+        if (lot->overlapsCell(cell())) {
+            mMapComposite->incrChangeCount(); // update VBOs if the lot overlaps this cell
+        }
+        return;
+    }
 
-    WorldCellLot *lot = cell()->lots().at(index);
     if (mLotToMC.contains(lot)) {
         QRectF bounds = lotSceneBounds(lot);
         mMapComposite->removeMap(mLotToMC[lot]);
@@ -6529,9 +6584,14 @@ void AdjacentMap::cellLotAboutToBeRemoved(WorldCell *_cell, int index)
     }
 }
 
-void AdjacentMap::cellLotMoved(WorldCellLot *lot)
+void AdjacentMap::cellLotMoved2(WorldCellLot *lot, const QPoint &oldPos)
 {
-    if (lot->cell() != cell()) return;
+    if (lot->cell() != cell()) {
+        if (lot->overlapsCell(cell(), oldPos) || lot->overlapsCell(cell())) {
+            mMapComposite->incrChangeCount(); // update VBOs if the lot now overlaps or used to overlap this cell
+        }
+        return;
+    }
 
     if (mLotToMC.contains(lot)) {
         QRectF bounds = lotSceneBounds(lot);
@@ -6544,7 +6604,12 @@ void AdjacentMap::cellLotMoved(WorldCellLot *lot)
 
 void AdjacentMap::lotLevelChanged(WorldCellLot *lot)
 {
-    if (lot->cell() != cell()) return;
+    if (lot->cell() != cell()) {
+        if (lot->overlapsCell(cell())) {
+            mMapComposite->incrChangeCount(); // update VBOs if the lot overlaps this cell
+        }
+        return;
+    }
 
     if (mLotToMC.contains(lot)) {
 
@@ -6553,6 +6618,8 @@ void AdjacentMap::lotLevelChanged(WorldCellLot *lot)
         mLotToMC[lot]->setOrigin(lot->pos());
 
         mLotToMC[lot]->setLevel(lot->level());
+
+        mMapComposite->incrChangeCount();
 
         // Make sure there are enough layer-groups to display the submap
         int minLevel = lot->level() + mLotToMC[lot]->minLevel();
@@ -6865,7 +6932,7 @@ void AdjacentMap::synchObjectItemVisibility()
 void AdjacentMap::setTool(AbstractTool *tool)
 {
     bool bFeatureToolActive = dynamic_cast<BaseInGameMapFeatureTool*>(tool) != nullptr;
-    for (InGameMapFeatureItem *item : mInGameMapFeatureItems) {
+    for (InGameMapFeatureItem *item : qAsConst(mInGameMapFeatureItems)) {
         item->setVisible(bFeatureToolActive);
     }
 }

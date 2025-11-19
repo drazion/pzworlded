@@ -469,6 +469,8 @@ public:
     Tiled::TileLayer *roadLayer0() const { return mRoadLayer0; }
 #endif // ROAD_CRUD
 
+    void incrChangeCount()
+    { ++mChangeCount; }
     int changeCount() const
     { return mChangeCount; }
 

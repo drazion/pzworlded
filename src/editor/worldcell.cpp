@@ -44,6 +44,20 @@ WorldCellLot::WorldCellLot(WorldCell *cell, WorldCellLot *other)
 {
 }
 
+bool WorldCellLot::overlapsCell(WorldCell *cell1) const
+{
+    return overlapsCell(cell1, pos());
+}
+
+bool WorldCellLot::overlapsCell(WorldCell *cell1, const QPoint &lotPos) const
+{
+    QRect cellBounds = cell()->bounds();
+    QRect lotBounds = QRect(lotPos, size()).translated(cellBounds.topLeft());
+    QRect cellBounds1 = cell1->bounds();
+    return lotBounds.intersects(cellBounds1);
+}
+
+
 /////
 
 WorldCell::WorldCell(World *world, int x, int y)

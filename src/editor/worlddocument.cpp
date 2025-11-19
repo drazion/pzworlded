@@ -126,6 +126,8 @@ WorldDocument::WorldDocument(World *world, const QString &fileName)
             this, &WorldDocument::cellLotAboutToBeRemoved);
     connect(&mUndoRedo, &WorldDocumentUndoRedo::cellLotMoved,
             this, &WorldDocument::cellLotMoved);
+    connect(&mUndoRedo, &WorldDocumentUndoRedo::cellLotMoved2,
+            this, &WorldDocument::cellLotMoved2);
     connect(&mUndoRedo, &WorldDocumentUndoRedo::lotLevelChanged,
             this, &WorldDocument::lotLevelChanged);
     connect(&mUndoRedo, &WorldDocumentUndoRedo::cellLotReordered,
@@ -1345,6 +1347,7 @@ QPoint WorldDocumentUndoRedo::moveCellLot(WorldCellLot *lot, const QPoint &pos)
     QPoint oldPos = lot->pos();
     lot->setPos(pos);
     emit cellLotMoved(lot);
+    emit cellLotMoved2(lot, oldPos);
     return oldPos;
 }
 
