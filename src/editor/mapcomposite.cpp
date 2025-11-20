@@ -375,9 +375,9 @@ void CompositeLayerGroup::orderedCellsAt(const QPoint &pos, const QRegion &suppr
         }
 #ifdef BUILDINGED
         // Use an empty tool tile if given during erasing.
-        if (tlTool && mToolLayers[index].mRegion.contains(subPos) && tlTool->contains(subPos - mToolLayers[index].mPos)) {
+        if (tlTool != nullptr && mToolLayers[index].mRegion.contains(subPos) && tlTool->contains(subPos - mToolLayers[index].mPos)) {
             cell = &tlTool->cellAt(subPos - mToolLayers[index].mPos);
-        } else if (cell->isEmpty() && tlBlendOver && tlBlendOver->contains(subPos)) {
+        } else if (cell->isEmpty() && tlBlendOver != nullptr && tlBlendOver->contains(subPos)) {
             cell = &tlBlendOver->cellAt(subPos);
         }
 #endif // BUILDINGED
@@ -510,13 +510,6 @@ bool CompositeLayerGroup::orderedCellsAt2(const QPoint &pos, OrderedCellsTempora
     cells.clear();
     for (const OrderedCell &oc : cellsToKeep) {
         const Tiled::Cell *cell = oc.cell;
-#ifdef BUILDINGED
-        const TileLayer *tlBlendOver = oc.layerGroup->mBlendOverLayers[oc.layerIndex];
-        QPoint subPos = pos - oc.layerGroup->mOwner->orientAdjustTiles() * mLevel;
-        if (cell->isEmpty() && tlBlendOver && tlBlendOver->contains(subPos)) {
-            cell = &tlBlendOver->cellAt(subPos);
-        }
-#endif // BUILDINGED
         cells += cell;
     }
 
@@ -540,6 +533,12 @@ void CompositeLayerGroup::orderedCellsAt2(const QPoint &pos, QVector<OrderedCell
                 cell = &tlBmpBlend->cellAt(subPos);
             }
         }
+#ifdef BUILDINGED
+        const TileLayer *tlBlendOver = mBlendOverLayers[index];
+        if (cell->isEmpty() && tlBlendOver != nullptr && tlBlendOver->contains(subPos)) {
+            cell = &tlBlendOver->cellAt(subPos);
+        }
+#endif // BUILDINGED
         if (cell->isEmpty()) {
             continue;
         }

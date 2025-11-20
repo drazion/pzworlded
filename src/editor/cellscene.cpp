@@ -5786,14 +5786,14 @@ void CellScene::showLotFloorsOnlyChanged(bool show)
     for (CompositeLayerGroup *layerGroup : mapComposite()->layerGroups()) {
         layerGroup->setNeedsSynch(true);
     }
-#if 1
+
     for (AdjacentMap *am : qAsConst(mAdjacentMaps)) {
         for (CompositeLayerGroup *layerGroup : am->mapComposite()->layerGroups()) {
             layerGroup->setNeedsSynch(true);
         }
         am->mapComposite()->synch(); // force VBO update
     }
-#endif
+
     mapComposite()->synch(); // force VBO update
     update();
 }

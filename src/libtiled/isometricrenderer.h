@@ -45,28 +45,28 @@ class TILEDSHARED_EXPORT IsometricRenderer : public MapRenderer
 public:
     IsometricRenderer(const Map *map) : MapRenderer(map) {}
 
-    QSize mapSize() const;
+    QSize mapSize() const override;
 
 #ifdef ZOMBOID
-    QRect boundingRect(const QRect &rect, int level = 0) const;
+    QRect boundingRect(const QRect &rect, int level = 0) const override;
 #else
     QRect boundingRect(const QRect &rect) const;
 #endif
 
-    QRectF boundingRect(const MapObject *object) const;
-    QPainterPath shape(const MapObject *object) const;
+    QRectF boundingRect(const MapObject *object) const override;
+    QPainterPath shape(const MapObject *object) const override;
 
 #ifdef ZOMBOID
-    void drawGrid(QPainter *painter, const QRectF &rect, QColor grid, int level = 0) const;
+    void drawGrid(QPainter *painter, const QRectF &rect, QColor grid, int level = 0) const override;
 #else
     void drawGrid(QPainter *painter, const QRectF &rect, QColor grid) const;
 #endif
     void drawTileLayer(QPainter *painter, const TileLayer *layer,
-                       const QRectF &exposed = QRectF()) const;
+                       const QRectF &exposed = QRectF()) const override;
 
 #ifdef ZOMBOID
    void drawTileLayerGroup(QPainter *painter, ZTileLayerGroup *layerGroup,
-                               const QRectF &exposed = QRectF()) const;
+                               const QRectF &exposed = QRectF()) const override;
 #endif
 
     void drawTileSelection(QPainter *painter,
@@ -74,25 +74,25 @@ public:
                            const QColor &color,
 #ifdef ZOMBOID
                             const QRectF &exposed,
-                            int level = 0) const;
+                            int level = 0) const override;
 #else
                            const QRectF &exposed) const;
 #endif
 
     void drawMapObject(QPainter *painter,
                        const MapObject *object,
-                       const QColor &color) const;
+                       const QColor &color) const override;
 
     void drawImageLayer(QPainter *painter,
                         const ImageLayer *layer,
-                        const QRectF &exposed = QRectF()) const;
+                        const QRectF &exposed = QRectF()) const override;
 
 #ifdef ZOMBOID
     using MapRenderer::pixelToTileCoords;
-    QPointF pixelToTileCoords(qreal x, qreal y, int level = 0) const;
+    QPointF pixelToTileCoords(qreal x, qreal y, int level = 0) const override;
 
     using MapRenderer::tileToPixelCoords;
-    QPointF tileToPixelCoords(qreal x, qreal y, int level = 0) const;
+    QPointF tileToPixelCoords(qreal x, qreal y, int level = 0) const override;
 #else
     using MapRenderer::pixelToTileCoords;
     QPointF pixelToTileCoords(qreal x, qreal y) const;
@@ -105,7 +105,7 @@ public:
     void drawFancyRectangle(QPainter *painter,
                             const QRectF &tileBounds,
                             const QColor &color,
-                            int level = 0) const;
+                            int level = 0) const override;
 #endif
 
 private:

@@ -144,6 +144,13 @@ struct TilePlusLayer
 
 struct OrderedCellsTemporaries
 {
+    OrderedCellsTemporaries()
+        : orderedCells(40)
+        , cellsToKeep(40)
+        , aboveLotCells(40)
+    {
+
+    }
     QVector<OrderedCell> orderedCells;
     QVector<OrderedCell> cellsToKeep;
     QVector<OrderedCell> aboveLotCells;
@@ -163,22 +170,22 @@ public:
     CompositeLayerGroup(MapComposite *owner, int level);
     ~CompositeLayerGroup();
 
-    void addTileLayer(Tiled::TileLayer *layer, int index);
-    void removeTileLayer(Tiled::TileLayer *layer);
+    void addTileLayer(Tiled::TileLayer *layer, int index) override;
+    void removeTileLayer(Tiled::TileLayer *layer) override;
 
-    void prepareDrawing(const Tiled::MapRenderer *renderer, const QRect &rect);
+    void prepareDrawing(const Tiled::MapRenderer *renderer, const QRect &rect) override;
 private:
     void prepareDrawing(const Tiled::MapRenderer *renderer, const QRect &rect, CompositeLayerGroup *rootGroup);
 public:
     bool orderedCellsAt(const QPoint &pos, QVector<const Tiled::Cell*>& cells,
-                        QVector<qreal> &opacities) const;
+                        QVector<qreal> &opacities) const override;
 private:
     void orderedCellsAt(const QPoint &pos, const QRegion &suppressRgn, const QPoint &rootPos, QVector<OrderedCell> &cells);
 public:
-    QRect bounds() const;
-    QMargins drawMargins() const;
+    QRect bounds() const override;
+    QMargins drawMargins() const override;
 
-    QRectF boundingRect(const Tiled::MapRenderer *renderer) const;
+    QRectF boundingRect(const Tiled::MapRenderer *renderer) const override;
 
     void prepareDrawing2();
 private:
