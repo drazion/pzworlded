@@ -207,10 +207,12 @@ void CompositeLayerGroup::prepareDrawing(const MapRenderer *renderer, const QRec
     if (mAnyVisibleLayers == false) {
         return;
     }
-    if (mOwner->isCellMap()) {
-        rootGroup->mPreparedSubMapLayers.append(SubMapLayers(mOwner, this));
-    } else {
-        rootGroup->mPreparedSubMapLayers2.append(SubMapLayers(mOwner, this));
+    if ((boundingRect(renderer) & rect).isValid()) {
+        if (mOwner->isCellMap()) {
+            rootGroup->mPreparedSubMapLayers.append(SubMapLayers(mOwner, this));
+        } else {
+            rootGroup->mPreparedSubMapLayers2.append(SubMapLayers(mOwner, this));
+        }
     }
     for (const SubMapLayers &subMapLayer : qAsConst(mVisibleSubMapLayers)) {
         CompositeLayerGroup *layerGroup = subMapLayer.mLayerGroup;
@@ -218,11 +220,6 @@ void CompositeLayerGroup::prepareDrawing(const MapRenderer *renderer, const QRec
             continue;
         QRectF bounds = layerGroup->boundingRect(renderer);
         if ((bounds & rect).isValid()) {
-            if (layerGroup->mOwner->isCellMap()) {
-                rootGroup->mPreparedSubMapLayers.append(subMapLayer);
-            } else {
-                rootGroup->mPreparedSubMapLayers2.append(subMapLayer);
-            }
             layerGroup->prepareDrawing(renderer, rect, rootGroup);
         }
     }
@@ -417,13 +414,7 @@ void CompositeLayerGroup::prepareDrawing2(CompositeLayerGroup *rootGroup)
     }
     for (MapComposite *subMap : mOwner->subMaps()) {
         int levelOffset = subMap->levelOffset();
-        CompositeLayerGroup *layerGroup = subMap->tileLayersForLevel(mLevel - levelOffset);
-        if (layerGroup) {
-            if (subMap->isCellMap()) {
-                rootGroup->mPreparedSubMapLayers.append(SubMapLayers(subMap, layerGroup));
-            } else {
-                rootGroup->mPreparedSubMapLayers2.append(SubMapLayers(subMap, layerGroup));
-            }
+        if (CompositeLayerGroup *layerGroup = subMap->tileLayersForLevel(mLevel - levelOffset)) {
             layerGroup->prepareDrawing2(rootGroup);
         }
     }
@@ -586,11 +577,6 @@ void CompositeLayerGroup::prepareDrawing3(const Tiled::MapRenderer *renderer, co
             QRectF bounds = layerGroup->boundingRect(renderer);
             if ((bounds & rect).isValid() == false) {
                 continue;
-            }
-            if (subMap->isCellMap()) {
-                rootGroup->mPreparedSubMapLayers.append(SubMapLayers(subMap, layerGroup));
-            } else {
-                rootGroup->mPreparedSubMapLayers2.append(SubMapLayers(subMap, layerGroup));
             }
             layerGroup->prepareDrawing3(renderer, rect, rootGroup);
         }

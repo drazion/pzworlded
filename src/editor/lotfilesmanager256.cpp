@@ -1405,8 +1405,9 @@ bool LotFilesWorker256::generateHeaderAux(int cell256X, int cell256Y)
 
 bool LotFilesWorker256::generateChunk(QDataStream &out, int chunkX, int chunkY)
 {
+
     int notdonecount = 0;
-    for (int z = mMinLevel; z <= mMaxLevel; z++)  {
+    for (int z = mMinLevel; z <= mMaxLevel; z++) {
         for (int x = 0; x < CHUNK_SIZE_256; x++) {
             for (int y = 0; y < CHUNK_SIZE_256; y++) {
                 int gx = chunkX + x;
@@ -1435,7 +1436,6 @@ bool LotFilesWorker256::generateChunk(QDataStream &out, int chunkX, int chunkY)
         out << qint32(-1);
         out << qint32(notdonecount);
     }
-
     return true;
 }
 
