@@ -32,6 +32,7 @@
 #include "worldconstants.h"
 #include "worlddocument.h"
 
+#include "BuildingEditor/buildingfloor.h"
 #include "BuildingEditor/roofhiding.h"
 
 #include "InGameMap/clipper.hpp"
@@ -307,6 +308,10 @@ bool LotFilesManager256::generateWorld(WorldDocument *worldDoc, GenerateMode mod
             }
         }
     }
+
+    Tiled::Internal::TileDefWatcher *tileDefWatcher = BuildingEditor::getTileDefWatcher();
+    tileDefWatcher->check();
+
 #if 1
     // The application should continue normally with the modal dialog box visible until everything finishes.
     mTimer.setInterval(1000 / 30);

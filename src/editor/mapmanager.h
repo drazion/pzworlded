@@ -123,6 +123,8 @@ public:
     }
     Tiled::Properties &properties() { return mProperties; }
 
+    bool isBasementAccess() const;
+
 private:
     Tiled::Map::Orientation mOrientation;
     int mWidth;

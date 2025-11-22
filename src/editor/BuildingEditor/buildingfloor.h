@@ -347,6 +347,7 @@ private:
 } // namespace BuildingEditor
 
 class TileDefFile;
+class TileDefTile;
 class TileDefTileset;
 
 namespace Tiled {
@@ -372,7 +373,9 @@ public:
 
     void check();
     TileDefTileset *tileset(const QString &tilesetName);
+    TileDefTile *tile(const QString &tilesetName, int tileIndex);
     TileDefWatcherFile *fileByName(const QString &filePath);
+    TileDefWatcherFile *fileByName(const QString &filePath, const QList<TileDefWatcherFile*> &files);
 
 signals:
     void tilePropertiesChanged();

@@ -873,12 +873,15 @@ void LayerGroupVBO::paint2(QPainter *painter, Tiled::MapRenderer *renderer, cons
                         continue;
                     const int tCount = tileCount[x+y*VBO_SQUARES];
                     for (int i = tFirst, n = i + tCount; i < n; i++) {
-                        if ((i > tFirst) && suppressRgn.contains(square))
+                        auto& tile = tiles[i];
+                        if (tile.mLayerIndex > 0 && suppressRgn.contains(square)) {
+                            // This square is outside the "Highlight Room Under Pointer" room.
+                            // Show only the Floor layer.
                             continue;
+                        }
                         GLuint start = i * 4;
                         GLuint end = start + 4 - 1;
                         GLuint count = 4;
-                        auto& tile = tiles[i];
                         if ((tile.mHideIfVisible != nullptr) && isLotVisible(tile.mHideIfVisible))
                             continue;
                         if ((tile.mSubMap != nullptr) && (isLotVisible(tile.mSubMap) == false))

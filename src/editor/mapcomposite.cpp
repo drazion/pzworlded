@@ -19,14 +19,21 @@
 
 #include "bmpblender.h"
 #include "mapmanager.h"
+#include "tiledeffile.h"
 #include "tilesetmanager.h"
+
+#include "BuildingEditor/building.h"
+#include "BuildingEditor/buildingfloor.h"
+#include "BuildingEditor/buildingroomdef.h"
 
 #include "maplevel.h"
 #include "mapobject.h"
 #include "maprenderer.h"
 #include "objectgroup.h"
 #include "propertiesgrid.h"
+#include "tile.h"
 #include "tilelayer.h"
+#include "tileset.h"
 
 #include <QDebug>
 #include <QDir>
@@ -199,6 +206,7 @@ void CompositeLayerGroup::prepareDrawing(const MapRenderer *renderer, const QRec
 {
     mPreparedSubMapLayers.resize(0);
     mPreparedSubMapLayers2.resize(0);
+    mPreparedSubMapLayers3.resize(0);
     prepareDrawing(renderer, rect, this);
 }
 
@@ -210,8 +218,10 @@ void CompositeLayerGroup::prepareDrawing(const MapRenderer *renderer, const QRec
     if ((boundingRect(renderer) & rect).isValid()) {
         if (mOwner->isCellMap()) {
             rootGroup->mPreparedSubMapLayers.append(SubMapLayers(mOwner, this));
-        } else {
+        } else if (!mOwner->mapInfo()->isBasementAccess()) {
             rootGroup->mPreparedSubMapLayers2.append(SubMapLayers(mOwner, this));
+        } else {
+            rootGroup->mPreparedSubMapLayers3.append(SubMapLayers(mOwner, this));
         }
     }
     for (const SubMapLayers &subMapLayer : qAsConst(mVisibleSubMapLayers)) {
@@ -309,9 +319,72 @@ bool CompositeLayerGroup::orderedCellsAt(const QPoint &pos,
 
     cellsToKeep.append(aboveLotCells);
 
+    // Overwrite the above tiles with basement-access tiles.
+    for (const SubMapLayers &subMapLayer : qAsConst(mPreparedSubMapLayers3)) {
+        if (!subMapLayer.mBounds.contains(pos))
+            continue;
+        orderedCells.clear();
+        subMapLayer.mLayerGroup->orderedCellsAt(pos - subMapLayer.mSubMap->originRecursive(), suppressRgn, rootPos, orderedCells);
+        if (orderedCells.isEmpty()) {
+            continue;
+        }
+        bool bKeepFloors = false;
+        bool bKeepWalls = false;
+        bool bKeepOther = false;
+        CompositeLayerGroup *layerGroup = subMapLayer.mLayerGroup;
+        MapComposite *subMap = layerGroup->owner();
+        if (MapLevel *mapLevel = layerGroup->mMap->mapLevelForZ(mLevel - subMap->levelOffset())) {
+            Tiled::PropertiesGrid *spg = mapLevel->squarePropertiesGrid();
+            QPoint subPos = pos - subMap->originRecursive();
+            if (spg->hasPropertiesAt(subPos.x(), subPos.y())) {
+                const Tiled::Properties &properties = spg->at(subPos.x(), subPos.y());
+                if (properties.contains(QStringLiteral("KeepFloors"))) {
+                    bKeepFloors = true;
+                }
+                if (properties.contains(QStringLiteral("KeepWalls"))) {
+                    bKeepWalls = true;
+                }
+                if (properties.contains(QStringLiteral("KeepOther"))) {
+                    bKeepOther = true;
+                }
+            }
+        }
+        Tiled::Internal::TileDefWatcher *tileDefWatcher = BuildingEditor::getTileDefWatcher(); // NOTE: not safe while multithreading active
+        for (int i = 0; i < cellsToKeep.size(); i++) {
+            OrderedCell& oc = cellsToKeep[i];
+            bool isFloor = false, isWall = false, isOther = false;
+            if (TileDefTile *tdt = tileDefWatcher->tile(oc.cell->tile->tileset()->name(), oc.cell->tile->id())) {
+                const auto &props = tdt->mProperties;
+                isFloor = props.contains(QStringLiteral("solidfloor"));
+                isWall = props.contains(QStringLiteral("WallW")) ||
+                         props.contains(QStringLiteral("WallN")) ||
+                         props.contains(QStringLiteral("WallNW")) ||
+                         props.contains(QStringLiteral("WalLSE"));
+                isOther = (isFloor || isWall) == false;
+            } else {
+                // This is NOT correct, but better than nothing when .tiles files aren't available.
+                const QString &layerNameWithoutPrefix = oc.layer->name();
+                isFloor = layerNameWithoutPrefix == sFloor;
+                isWall = layerNameWithoutPrefix.startsWith(QStringLiteral("Walls"));
+                isOther = (isFloor || isWall) == false;
+            }
+            if (bKeepFloors && isFloor) {
+                continue;
+            }
+            if (bKeepWalls && isWall) {
+                continue;
+            }
+            if (bKeepOther && isOther) {
+                continue;
+            }
+            cellsToKeep.remove(i--);
+        }
+        cellsToKeep.append(orderedCells);
+    }
+
     cells.clear();
     opacities.clear();
-    for (const OrderedCell &oc : cellsToKeep) {
+    for (const OrderedCell &oc : qAsConst(cellsToKeep)) {
         const Tiled::Cell *cell = oc.cell;
         cells += cell;
         opacities += oc.opacity;
@@ -402,6 +475,7 @@ void CompositeLayerGroup::prepareDrawing2()
 {
     mPreparedSubMapLayers.resize(0);
     mPreparedSubMapLayers2.resize(0);
+    mPreparedSubMapLayers3.resize(0);
     prepareDrawing2(this);
 }
 
@@ -409,8 +483,10 @@ void CompositeLayerGroup::prepareDrawing2(CompositeLayerGroup *rootGroup)
 {
     if (mOwner->isCellMap()) {
         rootGroup->mPreparedSubMapLayers.append(SubMapLayers(mOwner, this));
-    } else {
+    } else if (!mOwner->mapInfo()->isBasementAccess()) {
         rootGroup->mPreparedSubMapLayers2.append(SubMapLayers(mOwner, this));
+    } else {
+        rootGroup->mPreparedSubMapLayers3.append(SubMapLayers(mOwner, this));
     }
     for (MapComposite *subMap : mOwner->subMaps()) {
         int levelOffset = subMap->levelOffset();
@@ -498,8 +574,71 @@ bool CompositeLayerGroup::orderedCellsAt2(const QPoint &pos, OrderedCellsTempora
 
     cellsToKeep.append(aboveLotCells);
 
+    // Overwrite the above tiles with basement-access tiles.
+    for (const SubMapLayers &subMapLayer : qAsConst(mPreparedSubMapLayers3)) {
+        if (!subMapLayer.mBounds.contains(pos))
+            continue;
+        orderedCells.clear();
+        subMapLayer.mLayerGroup->orderedCellsAt2(pos - subMapLayer.mSubMap->originRecursive(), orderedCells);
+        if (orderedCells.isEmpty()) {
+            continue;
+        }
+        bool bKeepFloors = false;
+        bool bKeepWalls = false;
+        bool bKeepOther = false;
+        CompositeLayerGroup *layerGroup = subMapLayer.mLayerGroup;
+        MapComposite *subMap = layerGroup->owner();
+        if (MapLevel *mapLevel = layerGroup->mMap->mapLevelForZ(mLevel - subMap->levelOffset())) {
+            Tiled::PropertiesGrid *spg = mapLevel->squarePropertiesGrid();
+            QPoint subPos = pos - subMap->originRecursive();
+            if (spg->hasPropertiesAt(subPos.x(), subPos.y())) {
+                const Tiled::Properties &properties = spg->at(subPos.x(), subPos.y());
+                if (properties.contains(QStringLiteral("KeepFloors"))) {
+                    bKeepFloors = true;
+                }
+                if (properties.contains(QStringLiteral("KeepWalls"))) {
+                    bKeepWalls = true;
+                }
+                if (properties.contains(QStringLiteral("KeepOther"))) {
+                    bKeepOther = true;
+                }
+            }
+        }
+        Tiled::Internal::TileDefWatcher *tileDefWatcher = BuildingEditor::getTileDefWatcher(); // NOTE: not safe while multithreading active
+        for (int i = 0; i < cellsToKeep.size(); i++) {
+            OrderedCell& oc = cellsToKeep[i];
+            bool isFloor = false, isWall = false, isOther = false;
+            if (TileDefTile *tdt = tileDefWatcher->tile(oc.cell->tile->tileset()->name(), oc.cell->tile->id())) {
+                const auto &props = tdt->mProperties;
+                isFloor = props.contains(QStringLiteral("solidfloor"));
+                isWall = props.contains(QStringLiteral("WallW")) ||
+                         props.contains(QStringLiteral("WallN")) ||
+                         props.contains(QStringLiteral("WallNW")) ||
+                         props.contains(QStringLiteral("WalLSE"));
+                isOther = (isFloor || isWall) == false;
+            } else {
+                // This is NOT correct, but better than nothing when .tiles files aren't available.
+                const QString &layerNameWithoutPrefix = oc.layer->name();
+                isFloor = layerNameWithoutPrefix == sFloor;
+                isWall = layerNameWithoutPrefix.startsWith(QStringLiteral("Walls"));
+                isOther = (isFloor || isWall) == false;
+            }
+            if (bKeepFloors && isFloor) {
+                continue;
+            }
+            if (bKeepWalls && isWall) {
+                continue;
+            }
+            if (bKeepOther && isOther) {
+                continue;
+            }
+            cellsToKeep.remove(i--);
+        }
+        cellsToKeep.append(orderedCells);
+    }
+
     cells.clear();
-    for (const OrderedCell &oc : cellsToKeep) {
+    for (const OrderedCell &oc : qAsConst(cellsToKeep)) {
         const Tiled::Cell *cell = oc.cell;
         cells += cell;
     }
@@ -537,6 +676,7 @@ void CompositeLayerGroup::orderedCellsAt2(const QPoint &pos, QVector<OrderedCell
     }
 }
 
+#ifdef WORLDED
 void CompositeLayerGroup::prepareDrawingNoBmpBlender(const MapRenderer *renderer, const QRect &rect)
 {
     mPreparedSubMapLayers.resize(0);
@@ -558,6 +698,7 @@ void CompositeLayerGroup::prepareDrawing3(const Tiled::MapRenderer *renderer, co
 {
     mPreparedSubMapLayers.resize(0);
     mPreparedSubMapLayers2.resize(0);
+    mPreparedSubMapLayers3.resize(0);
     prepareDrawing3(renderer, rect, this);
 }
 
@@ -566,8 +707,10 @@ void CompositeLayerGroup::prepareDrawing3(const Tiled::MapRenderer *renderer, co
     if ((boundingRect(renderer) & rect).isValid()) {
         if (mOwner->isCellMap()) {
             rootGroup->mPreparedSubMapLayers.append(SubMapLayers(mOwner, this));
-        } else {
+        } else if (!mOwner->mapInfo()->isBasementAccess()) {
             rootGroup->mPreparedSubMapLayers2.append(SubMapLayers(mOwner, this));
+        } else {
+            rootGroup->mPreparedSubMapLayers3.append(SubMapLayers(mOwner, this));
         }
     }
     for (MapComposite *subMap : mOwner->subMaps()) {
@@ -646,13 +789,51 @@ bool CompositeLayerGroup::orderedCellsAt3(const QPoint &pos, OrderedCellsTempora
 
     // Overwrite cell-map tiles with building tiles at this location
     if ((buildingCells.isEmpty() == false) && (cellMapCells.isEmpty() == false)) {
+        if (mLevel == 0 && buildingCells.first().mLayerName == QStringLiteral("0_Floor")) {
+            // Floor tile suppress all other tiles, except AboveLot tiles.
+            for (TilePlusLayer &cell : cellMapCells) {
+                cell.mHideIfVisible = buildingCells.first().mSubMap;
+            }
+        }
+        else if (mLevel == 0) {
+            // Discard all tiles in non-Floor layers.  This keeps exterior building walls that don't have floors.
+            // Keep only the floor layers in a contiguous range starting at the lowest level (no non-floor layers between floor layers).
+            bool bKeepFloors = true;
+            for (TilePlusLayer &cell : cellMapCells) {
+                int p = cell.mLayerName.indexOf(QLatin1Char('_')) + 1; // strip N_ level prefix
+                QStringRef layerNameWithoutPrefix = cell.mLayerName.midRef(p);
+                if (!bKeepFloors || !layerNameWithoutPrefix.startsWith(sFloor)) {
+                    cell.mHideIfVisible = buildingCells.first().mSubMap;
+                    bKeepFloors = false;
+                }
+            }
+        }
+    }
+
+    cells.clear();
+    cells += cellMapCells;
+    cells += buildingCells;
+    cells += aboveLotCells;
+
+    // Overwrite the above tiles with basement-access tiles.
+    for (const SubMapLayers &subMapLayer : qAsConst(mPreparedSubMapLayers3)) {
+        if (!subMapLayer.mBounds.contains(pos))
+            continue;
+        orderedCells.clear();
+        subMapLayer.mLayerGroup->orderedCellsAt3(pos - subMapLayer.mSubMap->originRecursive(), orderedCells);
+        if (orderedCells.isEmpty()) {
+            continue;
+        }
         bool bKeepFloors = false;
         bool bKeepWalls = false;
         bool bKeepOther = false;
-        if (MapLevel *mapLevel = mMap->mapLevelForZ(mLevel)) {
+        CompositeLayerGroup *layerGroup = subMapLayer.mLayerGroup;
+        MapComposite *subMap = layerGroup->owner();
+        if (MapLevel *mapLevel = layerGroup->mMap->mapLevelForZ(mLevel - subMap->levelOffset())) {
             Tiled::PropertiesGrid *spg = mapLevel->squarePropertiesGrid();
-            if (spg->hasPropertiesAt(pos.x(), pos.y())) {
-                const Tiled::Properties &properties = spg->at(pos.x(), pos.y());
+            QPoint subPos = pos - subMap->originRecursive();
+            if (spg->hasPropertiesAt(subPos.x(), subPos.y())) {
+                const Tiled::Properties &properties = spg->at(subPos.x(), subPos.y());
                 if (properties.contains(QStringLiteral("KeepFloors"))) {
                     bKeepFloors = true;
                 }
@@ -664,34 +845,26 @@ bool CompositeLayerGroup::orderedCellsAt3(const QPoint &pos, OrderedCellsTempora
                 }
             }
         }
-        if (mLevel == 0) {
-            // Get the index of the maximum Floor layer in a cell map.
-            int maxFloor = -1;
-            for (int i = 0; i < cellMapCells.size(); i++) {
-                const TilePlusLayer& cell = cellMapCells.at(i);
-                if (cell.mLayerName.startsWith(QStringLiteral("0_Floor"))) {
-                    maxFloor = i;
-                    continue;
-                }
-                // Stop at the first non-floor layer.
-                break;
+        Tiled::Internal::TileDefWatcher *tileDefWatcher = BuildingEditor::getTileDefWatcher(); // NOTE: not safe while multithreading active
+        for (int i = 0; i < cells.size(); i++) {
+            TilePlusLayer& cell = cells[i];
+            bool isFloor = false, isWall = false, isOther = false;
+            if (TileDefTile *tdt = tileDefWatcher->tile(cell.mTile->tileset()->name(), cell.mTile->id())) {
+                const auto &props = tdt->mProperties;
+                isFloor = props.contains(QStringLiteral("solidfloor"));
+                isWall = props.contains(QStringLiteral("WallW")) ||
+                         props.contains(QStringLiteral("WallN")) ||
+                         props.contains(QStringLiteral("WallNW")) ||
+                         props.contains(QStringLiteral("WalLSE"));
+                isOther = (isFloor || isWall) == false;
+            } else {
+                // This is NOT correct, but better than nothing when .tiles files aren't available.
+                int p = cell.mLayerName.indexOf(QLatin1Char('_')) + 1; // strip N_ level prefix
+                QStringRef layerNameWithoutPrefix = cell.mLayerName.midRef(p);
+                isFloor = layerNameWithoutPrefix == sFloor;
+                isWall = layerNameWithoutPrefix.startsWith(QStringLiteral("Walls"));
+                isOther = (isFloor || isWall) == false;
             }
-            bKeepFloors = true;
-            const TilePlusLayer& buildingCell = buildingCells.at(0);
-            if (buildingCell.mLayerName == QStringLiteral("0_Floor")) {
-                // Hide cell-map floor tiles when our MapComposite is visible.
-                for (int i = 0; i < maxFloor; i++) {
-                    cellMapCells[i].mHideIfVisible = buildingCell.mSubMap;
-                }
-            }
-        }
-        for (int i = 0; i < cellMapCells.size(); i++) {
-            const TilePlusLayer& cell = cellMapCells.at(i);
-            int p = cell.mLayerName.indexOf(QLatin1Char('_')) + 1; // strip N_ level prefix
-            QStringRef layerNameWithoutPrefix = cell.mLayerName.midRef(p);
-            bool isFloor = layerNameWithoutPrefix.startsWith(sFloor);
-            bool isWall = layerNameWithoutPrefix.startsWith(QStringLiteral("Wall"));
-            bool isOther = (isFloor || isWall) == false;
             if (bKeepFloors && isFloor) {
                 continue;
             }
@@ -701,14 +874,14 @@ bool CompositeLayerGroup::orderedCellsAt3(const QPoint &pos, OrderedCellsTempora
             if (bKeepOther && isOther) {
                 continue;
             }
-            cellMapCells.remove(i--);
+            cell.mHideIfVisible = subMap;
+        }
+        for (const OrderedCell &oc : qAsConst(orderedCells)) {
+            TilePlusLayer cell(oc.layer->nameWithPrefix(), oc.cell->tile, oc.layerGroup->mVisibleLayers[oc.layerIndex], oc.opacity);
+            cell.mSubMap = oc.layerGroup->owner();
+            cells.append(cell);
         }
     }
-
-    cells.clear();
-    cells += cellMapCells;
-    cells += buildingCells;
-    cells += aboveLotCells;
 
     return !cells.isEmpty();
 }
@@ -753,6 +926,7 @@ void CompositeLayerGroup::orderedCellsAt3(const QPoint &pos, QVector<OrderedCell
         }
     }
 }
+#endif // WORLDED
 
 bool CompositeLayerGroup::isLayerEmpty(int index) const
 {
@@ -989,6 +1163,96 @@ bool CompositeLayerGroup::setLayerNonEmpty(TileLayer *tl, bool force)
     }
     return mNeedsSynch;
 }
+
+void CompositeLayerGroup::calculateUnlitRoomMask(BuildingEditor::Building *building)
+{
+    clearUseImageBlack();
+    prepareDrawing2();
+    BuildingEditor::BuildingFloor *floor = building->floor(level());
+    for (BuildingEditor::Room *room : building->rooms()) {
+        BuildingEditor::BuildingRoomDefecator rd(floor, room);
+        rd.defecate();
+        for (const QRegion& roomRgn : qAsConst(rd.mRegions)) {
+            if (roomHasLightSwitch(floor, roomRgn)) {
+                continue;
+            }
+            setUseImageBlack(roomRgn, true);
+        }
+    }
+}
+
+bool CompositeLayerGroup::roomHasLightSwitch(BuildingEditor::BuildingFloor *floor, const QRegion &region)
+{
+    Q_UNUSED(floor)
+
+    const int NORTH_SWITCH = 0;
+    const int WEST_SWITCH = 1;
+    const int EAST_SWITCH = 2;
+    const int SOUTH_SWITCH = 3;
+
+    QVector<const Cell*> cells(10);
+    OrderedCellsTemporaries vars;
+    for (const QRect &rect : region) {
+        for (int y = rect.top(); y <= rect.bottom(); y++) {
+            for (int x = rect.left(); x <= rect.right(); x++) {
+                cells.clear();
+                if (orderedCellsAt2(QPoint(x, y), vars, cells) == false) {
+                    continue;
+                }
+                for (const Cell *cell : qAsConst(cells)) {
+                    if (cell->isEmpty()) {
+                        continue;
+                    }
+                    Tile *tile = cell->tile;
+                    if (tile->tileset()->name() == QStringLiteral("lighting_indoor_01")) {
+                        int id = tile->id();
+                        if (id == NORTH_SWITCH || id == NORTH_SWITCH + 4 ||
+                                id == WEST_SWITCH || id == WEST_SWITCH + 4 ||
+                                id == EAST_SWITCH || id == EAST_SWITCH + 5 ||
+                                id == SOUTH_SWITCH || id == SOUTH_SWITCH + 3)
+                        {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return false;
+}
+
+void CompositeLayerGroup::setUseImageBlack(int x, int y, bool value)
+{
+    QRect bounds = this->bounds();
+    if (x < 0 || x >= bounds.width() || y < 0 || y >= bounds.height()) {
+        return;
+    }
+    if (mUseImageBlack.size() != bounds.width() * bounds.height()) {
+        mUseImageBlack.fill(false, bounds.width() * bounds.height());
+    }
+    mUseImageBlack[x + y * bounds.width()] = value;
+}
+
+void CompositeLayerGroup::setUseImageBlack(const QRect &rect, bool value)
+{
+    for (int y = rect.top(); y <= rect.bottom(); y++) {
+        for (int x = rect.left(); x <= rect.right(); x++) {
+            setUseImageBlack(x, y, value);
+        }
+    }
+}
+
+void CompositeLayerGroup::setUseImageBlack(const QRegion &region, bool value)
+{
+    for (const QRect &rect : region) {
+        setUseImageBlack(rect, value);
+    }
+}
+
+void CompositeLayerGroup::clearUseImageBlack()
+{
+    mUseImageBlack.fill(false);
+}
 #endif // BUILDINGED
 
 QRect CompositeLayerGroup::bounds() const
@@ -1143,6 +1407,18 @@ QRectF CompositeLayerGroup::boundingRect(const MapRenderer *renderer) const
     }
 
     return boundingRect;
+}
+
+bool CompositeLayerGroup::useImageBlack(int x, int y) const
+{
+    QRect bounds = this->bounds();
+    if (x < 0 || x >= bounds.width() || y < 0 || y > bounds.height()) {
+        return false;
+    }
+    if (mUseImageBlack.size() != bounds.width() * bounds.height()) {
+        return false;
+    }
+    return mUseImageBlack[x + y * bounds.width()];
 }
 
 ///// ///// ///// ///// /////

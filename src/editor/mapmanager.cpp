@@ -24,9 +24,11 @@
 #include "tilesetmanager.h"
 
 #include "map.h"
+#include "maplevel.h"
 #include "mapreader.h"
 #include "mapobject.h"
 #include "objectgroup.h"
+#include "propertiesgrid.h"
 #include "tile.h"
 #include "tilelayer.h"
 #include "tileset.h"
@@ -823,12 +825,7 @@ void MapManager::buildingLoadedByThread(Building *building, MapInfo *mapInfo)
     Map *map = bmap.mergedMap();
     bmap.addRoomDefObjects(map);
 
-#if 0
-    map->setProperty(QStringLiteral("Legend"), QStringLiteral("CommunityServices"));
-    map->setProperty(QStringLiteral("File"), QFileInfo(mapInfo->path()).fileName());
-#else
     map->setProperties(building->properties());
-#endif
 
     delete building;
 
@@ -1019,4 +1016,17 @@ MapInfo::MapInfo(Tiled::Map *map)
 #endif
     , mLoading(false)
 {
+}
+
+bool MapInfo::isBasementAccess() const
+{
+    if (map() == nullptr) {
+        return false;
+    }
+    for (MapLevel *mapLevel : map()->mapLevels()) {
+        if (!mapLevel->squarePropertiesGrid()->isEmpty()) {
+            return true;
+        }
+    }
+    return false;
 }

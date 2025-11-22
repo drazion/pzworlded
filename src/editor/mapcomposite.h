@@ -45,6 +45,13 @@ class BmpBlender;
 }
 }
 
+#ifdef BUILDINGED
+namespace BuildingEditor {
+class Building;
+class BuildingFloor;
+}
+#endif
+
 class CompositeLayerGroup;
 class MapComposite;
 
@@ -187,6 +194,8 @@ public:
 
     QRectF boundingRect(const Tiled::MapRenderer *renderer) const override;
 
+    bool useImageBlack(int x, int y) const override;
+
     void prepareDrawing2();
 private:
     void prepareDrawing2(CompositeLayerGroup *rootGroup);
@@ -266,6 +275,13 @@ public:
 
     void setHighlightLayer(const QString &layerName)
     { mHighlightLayer = layerName; }
+
+    void calculateUnlitRoomMask(BuildingEditor::Building *building);
+    bool roomHasLightSwitch(BuildingEditor::BuildingFloor *floor, const QRegion &region);
+    void setUseImageBlack(int x, int y, bool value);
+    void setUseImageBlack(const QRect& rect, bool value);
+    void setUseImageBlack(const QRegion &region, bool value);
+    void clearUseImageBlack();
 #endif
 
 private:
@@ -299,6 +315,7 @@ private:
 
     QVector<SubMapLayers> mPreparedSubMapLayers; // cell
     QVector<SubMapLayers> mPreparedSubMapLayers2; // building
+    QVector<SubMapLayers> mPreparedSubMapLayers3; // basement access
     QVector<SubMapLayers> mVisibleSubMapLayers;
 
     QVector<Tiled::TileLayer*> mBmpBlendLayers;
@@ -324,6 +341,7 @@ private:
     QVector<ToolNoBlend> mToolNoBlends;
     QString mHighlightLayer;
     QVector<bool> mForceNonEmpty;
+    QVector<bool> mUseImageBlack;
 #endif // BUILDINGED
 #if 1 // ROAD_CRUD
     Tiled::TileLayer *mRoadLayer0; // 0_Floor

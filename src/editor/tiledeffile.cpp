@@ -267,7 +267,7 @@ TileDefTile *TileDefTileset::tileAt(int index)
 {
     if (index >= 0 && index < mTiles.size())
         return mTiles.at(index);
-    return 0;
+    return nullptr;
 }
 
 void TileDefTileset::resize(int columns, int rows)
