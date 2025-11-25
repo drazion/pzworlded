@@ -4770,7 +4770,7 @@ void CellScene::setDocument(CellDocument *doc)
     connect(MapManager::instance(), &MapManager::mapFailedToLoad,
             this, &CellScene::mapFailedToLoad);
 
-    mOverlappingLots.setDocument(document());
+    mOverlappingLots.setDocument();
 
     loadMap();
 
@@ -6109,7 +6109,18 @@ void CellScene::sortSubMaps()
     for (SubMapItem *item : qAsConst(mSubMapItems)) {
         orderedMaps += item->subMap();
     }
+    mOverlappingLots.sortSubMaps(orderedMaps);
     mMapComposite->sortSubMaps(orderedMaps);
+}
+
+bool CellScene::isAdjacentLot(WorldCellLot *lot) const
+{
+    for (AdjacentMap *am : mAdjacentMaps) {
+        if (lot->cell() == am->cell()) {
+            return true;
+        }
+    }
+    return false;
 }
 
 bool CellScene::lotOverlapsCellOrAdjacent(WorldCellLot *lot) const
@@ -7100,7 +7111,7 @@ WorldCell *OverlappingLots::cell() const
     return mScene->cell();
 }
 
-void OverlappingLots::setDocument(CellDocument *doc)
+void OverlappingLots::setDocument()
 {
     connect(worldDocument(), &WorldDocument::cellLotAdded, this, &OverlappingLots::cellLotAdded);
     connect(worldDocument(), &WorldDocument::cellLotAboutToBeRemoved, this, &OverlappingLots::cellLotAboutToBeRemoved);
@@ -7110,6 +7121,8 @@ void OverlappingLots::setDocument(CellDocument *doc)
 
     connect(MapManager::instance(), &MapManager::mapLoaded, this, &OverlappingLots::mapLoaded);
     connect(MapManager::instance(), &MapManager::mapFailedToLoad, this, &OverlappingLots::mapFailedToLoad);
+    connect(MapManager::instance(), &MapManager::mapAboutToChange, this, &OverlappingLots::mapAboutToChange);
+    connect(MapManager::instance(), &MapManager::mapChanged, this, &OverlappingLots::mapChanged);
 }
 
 void OverlappingLots::init()
@@ -7125,12 +7138,32 @@ void OverlappingLots::init()
     }
 }
 
+void OverlappingLots::sortSubMaps(QVector<MapComposite *> &ordered)
+{
+    for (WorldCellLot *lot : qAsConst(mLots)) {
+        if (MapComposite *subMap = mLotToMC[lot]) {
+            ordered += subMap;
+        }
+    }
+}
+
 void OverlappingLots::cellLotAdded(WorldCell *_cell, int index)
 {
     WorldCellLot *lot = _cell->lots().at(index);
-    bool isAdjacentLot = false;
-    if (_cell == cell() || isAdjacentLot || !lot->overlapsCell(cell())) {
+    if (_cell == cell() || mScene->isAdjacentLot(lot) || !lot->overlapsCell(cell())) {
         return;
+    }
+    if (!mLots.contains(lot)) {
+        QRect ignoreCells;
+        if (Preferences::instance()->showAdjacentMaps()) {
+            ignoreCells = QRect(cell()->x() - 1, cell()->y() - 1, 3, 3);
+        }
+        WorldCellLotList lots = world()->getLotsOverlappingCellBounds(cell()->x(), cell()->y(), ignoreCells);
+        int index1 = lots.indexOf(lot);
+        if (index1 == -1) {
+            index1 = mLots.size();
+        }
+        mLots.insert(index1, lot);
     }
     MapInfo *subMapInfo = MapManager::instance()->loadMap(lot->mapName(), QString(), true, MapManager::PriorityLow);
     if (!subMapInfo) {
@@ -7151,6 +7184,7 @@ void OverlappingLots::cellLotAboutToBeRemoved(WorldCell *_cell, int index)
     if (!mLots.contains(lot)) {
         return;
     }
+    mLots.removeAll(lot);
     MapComposite *subMap = mLotToMC[lot];
     if (subMap) {
         QRectF boundsOld = subMap->boundingRect(mScene->renderer());
@@ -7211,17 +7245,27 @@ void OverlappingLots::lotLevelChanged(WorldCellLot *lot)
 
 void OverlappingLots::cellLotReordered(WorldCellLot *lot)
 {
-
+    if (!mLots.contains(lot)) {
+        return;
+    }
+    QRect ignoreCells;
+    if (Preferences::instance()->showAdjacentMaps()) {
+        ignoreCells = QRect(cell()->x() - 1, cell()->y() - 1, 3, 3);
+    }
+    mLots = world()->getLotsOverlappingCellBounds(cell()->x(), cell()->y(), ignoreCells);
 }
 
-bool OverlappingLots::mapAboutToChange(MapInfo *mapInfo)
+void OverlappingLots::mapAboutToChange(MapInfo *mapInfo)
 {
-    return false;
+    if (mapInfo == mScene->mapComposite()->mapInfo()) {
+        mLots.clear();
+        mLotToMC.clear();
+    }
 }
 
-bool OverlappingLots::mapChanged(MapInfo *mapInfo)
+void OverlappingLots::mapChanged(MapInfo *mapInfo)
 {
-    return false;
+    int dbg = 1;
 }
 
 void OverlappingLots::mapLoaded(MapInfo *mapInfo)
@@ -7229,9 +7273,7 @@ void OverlappingLots::mapLoaded(MapInfo *mapInfo)
     for (int i = 0; i < mSubMapsLoading.size(); i++) {
         LoadingSubMap &sm = mSubMapsLoading[i];
         if (sm.mapInfo == mapInfo) {
-            MapComposite *subMap = mMapComposite->addMap(sm.mapInfo,
-                                                         (sm.lot->cell()->pos() - cell()->pos()) * 300 + sm.lot->pos(),
-                                                         sm.lot->level());
+            MapComposite *subMap = mMapComposite->addMap(sm.mapInfo, adjustedLotPos(sm.lot), sm.lot->level());
 
             // Update with most-recent information
             sm.lot->setMapName(sm.mapInfo->path());
@@ -7245,6 +7287,8 @@ void OverlappingLots::mapLoaded(MapInfo *mapInfo)
             mSubMapsLoading.removeAt(i);
 
             --i;
+
+            mScene->sortSubMaps();
 
             mScene->mapCompositeNeedsSynch();
             QRectF boundsNew = subMap->boundingRect(mScene->renderer());

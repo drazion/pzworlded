@@ -643,8 +643,9 @@ public:
     WorldDocument *worldDocument() const;
     World *world() const;
     WorldCell *cell() const;
-    void setDocument(CellDocument *doc);
+    void setDocument();
     void init();
+    void sortSubMaps(QVector<MapComposite*>& ordered);
 
 private slots:
     void cellLotAdded(WorldCell *cell, int index);
@@ -653,8 +654,8 @@ private slots:
     void lotLevelChanged(WorldCellLot *lot);
     void cellLotReordered(WorldCellLot *lot);
 
-    bool mapAboutToChange(MapInfo *mapInfo);
-    bool mapChanged(MapInfo *mapInfo);
+    void mapAboutToChange(MapInfo *mapInfo);
+    void mapChanged(MapInfo *mapInfo);
     void mapLoaded(MapInfo *mapInfo);
     void mapFailedToLoad(MapInfo *mapInfo);
 
@@ -898,13 +899,15 @@ public:
 
     void lotFileChanged(WorldCellLot *lot);
 
+    void sortSubMaps();
+    bool isAdjacentLot(WorldCellLot *lot) const;
+
 protected:
     void loadMap();
     void updateBordersItem();
     void updateCurrentLevelHighlight();
     bool shouldObjectItemBeVisible(ObjectItem *item);
     void synchAdjacentMapObjectItemVisibility();
-    void sortSubMaps();
     bool lotOverlapsCellOrAdjacent(WorldCellLot *lot) const;
 
     typedef Tiled::Tileset Tileset;
