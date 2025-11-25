@@ -733,30 +733,38 @@ void SubMapTool::mousePressEvent(QGraphicsSceneMouseEvent *event)
 static MapComposite *mapUnderPoint(CellScene *scene, MapComposite *mc, MapRenderer *renderer,
                                    const QPointF &scenePos)
 {
-    foreach (MapComposite *subMap, mc->subMaps()) {
+    for (int i = mc->subMaps().size() - 1; i >= 0; i--) {
+        MapComposite *subMap = mc->subMaps().at(i);
         if (subMap->isAdjacentMap()) {
             MapComposite *subSubMap = mapUnderPoint(scene, subMap, renderer, scenePos);
-            if (subSubMap)
+            if (subSubMap) {
                 subMap = subSubMap;
+            }
         }
 
         bool ignore = false;
         QList<SubMapItem*> items = scene->subMapItemsUsingMapInfo(subMap->mapInfo());
-        foreach (SubMapItem *item, items) {
+        for (SubMapItem *item : qAsConst(items)) {
             if (item->subMap() == subMap) {
                 ignore = true;
                 break;
             }
         }
-        if (ignore)
+        if (ignore) {
             continue;
+        }
+
+        if (Preferences::instance()->highlightCurrentLevel() && subMap->levelRecursive() > scene->document()->currentLevel()) {
+            continue;
+        }
 
         QRect tileBounds = subMap->mapInfo()->bounds().translated(subMap->originRecursive());
         QPolygonF scenePolygon = renderer->tileToPixelCoords(tileBounds);
-        if (scenePolygon.containsPoint(scenePos, Qt::WindingFill))
+        if (scenePolygon.containsPoint(scenePos, Qt::WindingFill)) {
             return subMap;
+        }
     }
-    return 0;
+    return nullptr;
 }
 
 void SubMapTool::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
@@ -766,8 +774,9 @@ void SubMapTool::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
     MapComposite *highlight = nullptr;
     if (!item && !mMousePressed) {
         if (MapComposite *mc = mapUnderPoint(mScene, mScene->mapComposite(), mScene->renderer(), event->scenePos())) {
-            if (mc->isAdjacentMap())
+            if (mc->isAdjacentMap()) {
                 mc = nullptr;
+            }
             highlight = mc;
         }
     }
@@ -785,10 +794,11 @@ void SubMapTool::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
     if (mMode == NoMode && mMousePressed) {
         const int dragDistance = (mStartScenePos - event->scenePos()).manhattanLength();
         if (dragDistance >= QApplication::startDragDistance()) {
-            if (mClickedItem)
+            if (mClickedItem) {
                 startMoving();
-            else
+            } else {
                 startSelecting();
+            }
         }
     }
 
