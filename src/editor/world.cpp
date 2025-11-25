@@ -64,6 +64,25 @@ void World::setSize(const QSize &newSize)
     mHeight = newSize.height();
 }
 
+WorldCellLotList World::getLotsOverlappingCellBounds(int cellX, int cellY, const QRect &ignoreCells)
+{
+    QRect cellRect(cellX * 300, cellY * 300, 300, 300);
+    WorldCellLotList result;
+    for (int y = 0; y < height(); y++) {
+        for (int x = 0; x < width(); x++) {
+            if ((x == cellX && y == cellY) || ignoreCells.contains(x, y)) {
+                continue;
+            }
+            WorldCell *cell = cellAt(x, y);
+            if (cell == nullptr) {
+                continue;
+            }
+            cell->getLotsOverlappingRect(cellRect, result);
+        }
+    }
+    return result;
+}
+
 PropertyDef *World::removePropertyDefinition(int index)
 {
     return mPropertyDefs.takeAt(index);

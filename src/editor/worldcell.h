@@ -453,6 +453,7 @@ public:
     bool isEmpty() const;
 
     void getLotsOverlappingCellBounds(WorldCellLotList &lots) const;
+    void getLotsOverlappingRect(const QRect &rect, WorldCellLotList &lots) const;
 
 private:
     int mX, mY;

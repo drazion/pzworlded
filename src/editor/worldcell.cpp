@@ -124,6 +124,16 @@ void WorldCell::getLotsOverlappingCellBounds(WorldCellLotList &result) const
     }
 }
 
+void WorldCell::getLotsOverlappingRect(const QRect &rect, WorldCellLotList &result) const
+{
+    for (WorldCellLot *lot : lots()) {
+        QRect lotBounds = lot->bounds().translated(x() * 300, y() * 300);
+        if (lotBounds.intersects(rect)) {
+            result += lot;
+        }
+    }
+}
+
 /////
 
 WorldObjectGroup::WorldObjectGroup(World *world)

@@ -633,6 +633,50 @@ private:
     QList<InGameMapFeatureItem*> mInGameMapFeatureItems;
 };
 
+class OverlappingLots : public QObject
+{
+    Q_OBJECT
+public:
+    OverlappingLots(CellScene *scene);
+    ~OverlappingLots();
+
+    WorldDocument *worldDocument() const;
+    World *world() const;
+    WorldCell *cell() const;
+    void setDocument(CellDocument *doc);
+    void init();
+
+private slots:
+    void cellLotAdded(WorldCell *cell, int index);
+    void cellLotAboutToBeRemoved(WorldCell *cell, int index);
+    void cellLotMoved2(WorldCellLot *lot, const QPoint &oldPos);
+    void lotLevelChanged(WorldCellLot *lot);
+    void cellLotReordered(WorldCellLot *lot);
+
+    bool mapAboutToChange(MapInfo *mapInfo);
+    bool mapChanged(MapInfo *mapInfo);
+    void mapLoaded(MapInfo *mapInfo);
+    void mapFailedToLoad(MapInfo *mapInfo);
+
+private:
+    QPoint adjustedLotPos(WorldCellLot *lot);
+
+    CellScene *mScene;
+    MapComposite *mMapComposite;
+    WorldCellLotList mLots;
+    QMap<WorldCellLot*, MapComposite*> mLotToMC;
+
+    struct LoadingSubMap {
+        LoadingSubMap(WorldCellLot *lot, MapInfo *mapInfo) :
+            lot(lot),
+            mapInfo(mapInfo)
+        {}
+        WorldCellLot *lot;
+        MapInfo *mapInfo;
+    };
+    QList<LoadingSubMap> mSubMapsLoading;
+};
+
 class QOpenGLContext;
 class QOpenGLTexture;
 
@@ -1023,6 +1067,8 @@ private:
 
     bool mDestroying;
     std::array<MapCompositeVBO,9> mMapCompositeVBO;
+
+    OverlappingLots mOverlappingLots;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(CellScene::PendingFlags)

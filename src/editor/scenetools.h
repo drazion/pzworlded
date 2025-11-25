@@ -359,6 +359,8 @@ public:
     explicit SubMapTool();
     ~SubMapTool() {}
 
+    void setScene(BaseGraphicsScene *scene);
+
     void activate();
     void deactivate();
 
@@ -375,6 +377,9 @@ public:
         setName(tr("Select and Move Lots"));
         //setShortcut(QKeySequence(tr("S")));
     }
+
+private slots:
+    void cellLotAboutToBeRemoved(WorldCell *cell, int index);
 
 private:
     void startSelecting();

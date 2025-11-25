@@ -669,9 +669,21 @@ SubMapTool::SubMapTool()
     mMapHighlightItem->setZValue(CellScene::ZVALUE_GRID - 1);
 }
 
+void SubMapTool::setScene(BaseGraphicsScene *scene)
+{
+    if (mScene) {
+        mScene->worldDocument()->disconnect(this);
+    }
+    mScene = scene ? scene->asCellScene() : nullptr;
+    if (mScene) {
+        connect(mScene->worldDocument(), &WorldDocument::cellLotAboutToBeRemoved, this, &SubMapTool::cellLotAboutToBeRemoved);
+    }
+}
+
+
 void SubMapTool::activate()
 {
-        mScene->addItem(mMapHighlightItem);
+    mScene->addItem(mMapHighlightItem);
 }
 
 void SubMapTool::deactivate()
@@ -836,6 +848,16 @@ void SubMapTool::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
 
     mMousePressed = false;
     mClickedItem = nullptr;
+}
+
+void SubMapTool::cellLotAboutToBeRemoved(WorldCell *cell, int index)
+{
+    Q_UNUSED(cell)
+    Q_UNUSED(index)
+    if (mMapHighlightItem != nullptr) {
+        mMapHighlightItem->setVisible(false);
+    }
+    mHighlightedMap = nullptr;
 }
 
 void SubMapTool::startSelecting()

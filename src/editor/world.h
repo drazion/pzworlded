@@ -18,6 +18,7 @@
 #ifndef WORLD_H
 #define WORLD_H
 
+#include "worldcell.h"
 #include "worldproperties.h"
 #include "road.h"
 
@@ -29,7 +30,7 @@
 class BMPToTMXImages;
 class WorldObjectGroup;
 class ObjectType;
-class WorldCell;
+
 
 class ObjectGroupList : public QList<WorldObjectGroup*>
 {
@@ -227,6 +228,8 @@ public:
     }
     WorldCell *cellAt(const QPoint &pos)
     { return cellAt(pos.x(), pos.y()); }
+
+    WorldCellLotList getLotsOverlappingCellBounds(int cellX, int cellY, const QRect &ignoreCells);
 
     bool contains(int x, int y)
     { return x >= 0 && x < mWidth && y >= 0 && y < mHeight; }
