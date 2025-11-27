@@ -289,7 +289,7 @@ bool TilesetManager::getTilesetFileName(const QString &tilesetName, QString &pat
     }
 
     QFileInfoList infoList = dir2x.entryInfoList(QDir::AllDirs | QDir::NoDotAndDotDot);
-    for (const QFileInfo &dirInfo : infoList) {
+    for (const QFileInfo &dirInfo : qAsConst(infoList)) {
         QDir dir = QDir(dirInfo.filePath());
         QString try2x = dir.filePath(fileName);
         if (QImageReader(try2x).size().isValid()) {
@@ -304,7 +304,7 @@ bool TilesetManager::getTilesetFileName(const QString &tilesetName, QString &pat
     }
 
     infoList = dir1x.entryInfoList(QDir::AllDirs | QDir::NoDotAndDotDot);
-    for (const QFileInfo &dirInfo : infoList) {
+    for (const QFileInfo &dirInfo : qAsConst(infoList)) {
         QDir dir = QDir(dirInfo.filePath());
         QString try1x = dir.filePath(fileName);
         if (QImageReader(try1x).size().isValid()) {
@@ -453,7 +453,7 @@ void TilesetManager::imageLoaded(Tileset *fromThread, Tileset *tileset)
 
 void TilesetManager::tilePropertiesChanged()
 {
-    for (Tileset *cached : mTilesetImageCache->mTilesets) {
+    for (Tileset *cached : qAsConst(mTilesetImageCache->mTilesets)) {
         cachePZProperties(cached);
     }
     for (Tileset *tileset : tilesets()) {
@@ -561,17 +561,17 @@ void TilesetManager::waitForTilesets(const QList<Tileset *> &tilesets, QWidget *
     }
     qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
 
-    foreach (Tileset *ts, tilesets) {
+    for (Tileset *ts : tilesets) {
         if (ts->isLoaded())
             continue;
         // Missing tilesets aren't in mTilesetImageCache
         if (ts->isMissing())
             continue;
         // There may be a thread already reading or about to read this image.
-        QImage *image = new QImage(ts->imageSource2x().isEmpty() ? ts->imageSource() : ts->imageSource2x());
         Tileset *cached = mTilesetImageCache->findMatch(ts, ts->imageSource(), ts->imageSource2x());
-        Q_ASSERT(cached != 0 && !cached->isLoaded());
+        Q_ASSERT(cached != nullptr && !cached->isLoaded());
         if (cached) {
+            QImage *image = new QImage(ts->imageSource2x().isEmpty() ? ts->imageSource() : ts->imageSource2x());
             imageLoaded(image, cached); // deletes image
         }
     }
