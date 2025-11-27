@@ -1557,6 +1557,7 @@ void ObjectLabelItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *,
 {
     QRectF r = boundingRect();
     painter->fillRect(r, mBgColor);
+    painter->setPen(Qt::black);
     painter->drawText(r, Qt::AlignCenter, text());
 }
 
