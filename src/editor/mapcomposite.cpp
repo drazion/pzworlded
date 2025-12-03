@@ -1929,28 +1929,24 @@ void MapComposite::checkMinMaxLevels(int minLevel, int maxLevel)
 {
     minLevel = qMin(minLevel, mMinLevel);
     maxLevel = qMax(maxLevel, mMaxLevel);
-    if ((mMinLevel == minLevel) && (maxLevel == mMaxLevel))
+    if ((mMinLevel == minLevel) && (maxLevel == mMaxLevel)) {
         return;
-
-    for (int level = mMinLevel - 1; level >= minLevel; level--) {
-        if (!mLayerGroups.contains(level)) { // always true
+    }
+    QVector<int> added;
+    for (int level = minLevel; level <= maxLevel; level++) {
+        if (!mLayerGroups.contains(level)) {
             mLayerGroups[level] = new CompositeLayerGroup(this, level);
-            mMinLevel = level;
-            mSortedLayerGroups.clear();
-            for (int i = mMinLevel; i <= mMaxLevel; ++i)
-                mSortedLayerGroups.append(mLayerGroups[i]);
-            emit layerGroupAdded(level);
+            added += level;
         }
     }
-    for (int level = mMaxLevel + 1; level <= maxLevel; level++) {
-        if (!mLayerGroups.contains(level)) { // always true
-            mLayerGroups[level] = new CompositeLayerGroup(this, level);
-            mMaxLevel = level;
-            mSortedLayerGroups.clear();
-            for (int i = mMinLevel; i <= mMaxLevel; ++i)
-                mSortedLayerGroups.append(mLayerGroups[i]);
-            emit layerGroupAdded(level);
-        }
+    mMinLevel = minLevel;
+    mMaxLevel = maxLevel;
+    mSortedLayerGroups.clear();
+    for (int i = mMinLevel; i <= mMaxLevel; ++i) {
+        mSortedLayerGroups.append(mLayerGroups[i]);
+    }
+    for (int level : qAsConst(added)) {
+        emit layerGroupAdded(level);
     }
 }
 
@@ -2336,6 +2332,61 @@ void MapComposite::setSuppressRegion(const QRegion &rgn, int level)
 {
     mSuppressRgn = rgn;
     mSuppressLevel = level;
+}
+
+MapComposite *MapComposite::cropToMinimum(QPoint &offset)
+{
+    QVector<const Tiled::Cell *> cells(40);
+    OrderedCellsTemporaries vars;
+    MapInfo *mapInfo = this->mapInfo();
+    int mapWidth = mapInfo->width();
+    int mapHeight = mapInfo->height();
+    int minX = std::numeric_limits<int>::max();
+    int minY = std::numeric_limits<int>::max();
+    int maxX = std::numeric_limits<int>::min();
+    int maxY = std::numeric_limits<int>::min();
+    synch();
+    for (CompositeLayerGroup *lg : layerGroups()) {
+        lg->prepareDrawing2();
+        int d = (mapInfo->orientation() == Map::Isometric) ? -3 : 0;
+        d *= lg->level();
+        for (int y = d; y < mapHeight; y++) {
+            for (int x = d; x < mapWidth; x++) {
+                cells.resize(0);
+                lg->orderedCellsAt2(QPoint(x, y), vars, cells);
+                if (cells.isEmpty()) {
+                    continue;
+                }
+                minX = std::min(minX, x);
+                minY = std::min(minY, y);
+                maxX = std::max(maxX, x);
+                maxY = std::max(maxY, y);
+            }
+        }
+    }
+    if (maxX - minX + 1 == mapWidth && maxY - minY + 1 == mapHeight) {
+        return nullptr;
+    }
+#if 1
+    Map *mapNew = map()->clone();
+    mapNew->setWidth(maxX - minX + 1);
+    mapNew->setHeight(maxY - minY + 1);
+    for (Layer* layer : mapNew->layers()) {
+        layer->resize(mapNew->size(), { -minX, -minY });
+    }
+#else
+    Map *mapNew = new Map(Map::LevelIsometric, maxX - minX + 1, maxY - minY + 1, 64, 32);
+    for (Layer* layer : map()->layers()) {
+        Layer* newLayer = layer->clone();
+        newLayer->resize(mapNew->size(), { -minX, -minY });
+        mapNew->addLayer(newLayer);
+    }
+#endif
+    MapInfo *mapInfoNew = MapManager::instance()->newFromMap(mapNew);
+    MapComposite *mapCompositeNew = new MapComposite(mapInfoNew, mapNew->orientation());
+    offset.setX(minX);
+    offset.setY(minY);
+    return mapCompositeNew;
 }
 
 #if 1 // ROAD_CRUD

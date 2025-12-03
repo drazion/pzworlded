@@ -503,6 +503,8 @@ public:
     int suppressLevel() const
     { return mSuppressLevel; }
 
+    MapComposite* cropToMinimum(QPoint& offset);
+
 #if 1 // ROAD_CRUD
     void generateRoadLayers(const QPoint &roadPos, const QList<Road *> &roads);
     Tiled::TileLayer *roadLayer1() const { return mRoadLayer1; }
