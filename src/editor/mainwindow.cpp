@@ -75,6 +75,7 @@
 #include "writespawnpointsdialog.h"
 #include "writeworldobjectsdialog.h"
 #include "zoomable.h"
+#include "biomemapgeneratorDialog.h"
 
 #include "InGameMap/ingamemapfeaturegenerator.h"
 #include "InGameMap/ingamemapdock.h"
@@ -359,6 +360,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     connect(ui->actionLotPackViewer, &QAction::triggered, this, &MainWindow::lotpackviewer);
     connect(ui->actionLootInspector, &QAction::triggered, this, &MainWindow::lootInspector);
+	connect(ui->actionGenerate_BiomeMap, &QAction::triggered, this, &MainWindow::BiomeMapGenerator);
 //    connect(ui->actionReadOldWaterDotLua, &QAction::triggered, this, &MainWindow::readOldWaterDotLua);
 
     connect(ui->actionAboutQt, &QAction::triggered, qApp, &QApplication::aboutQt);
@@ -1176,6 +1178,16 @@ void MainWindow::lootInspector()
         qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
         LootWindow::instance().setDocument(mCurrentDocument);
     }
+}
+
+void MainWindow::BiomeMapGenerator() {
+
+    WorldDocument *worldDoc = mCurrentDocument->asWorldDocument();
+    if (!worldDoc)
+        worldDoc = mCurrentDocument->asCellDocument()->worldDocument();
+    biomemapgeneratorDialog d(worldDoc->world(), this);
+    d.exec();
+
 }
 
 #include "waterflow.h"
@@ -3210,6 +3222,7 @@ void MainWindow::updateActions()
     ui->actionOverwriteInGameMapFeaturesXML_256->setEnabled(hasDoc && hasReadFeaturesXML);
     ui->actionCreateFeatureImage->setEnabled(hasDoc);
     ui->actionCreateWorldImage->setEnabled(hasDoc);
+	ui->actionGenerate_BiomeMap->setEnabled(hasDoc);
 
     ui->actionSnapToGrid->setEnabled(cellDoc != 0);
     ui->actionShowCoordinates->setEnabled(worldDoc != 0);

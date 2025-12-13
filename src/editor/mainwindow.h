@@ -187,7 +187,7 @@ public slots:
     void ZonesToPNG();
 
     void lootInspector();
-
+	void BiomeMapGenerator();
     void readOldWaterDotLua();
 
 private:

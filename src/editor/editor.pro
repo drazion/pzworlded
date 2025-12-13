@@ -69,6 +69,8 @@ SOURCES += main.cpp\
     lotfilesmanager256.cpp \
     luatable.cpp \
         mainwindow.cpp \
+	biomemapgeneratorDialog.cpp \
+	ImageProcessor.cpp \
     InGameMap/clipper.cpp \
     InGameMap/ingamemapcell.cpp \
     InGameMap/ingamemapdock.cpp \
@@ -190,6 +192,8 @@ SOURCES += main.cpp\
 HEADERS  += mainwindow.h \
     exportlotsprogressdialog.h \
     generatelotsfailuredialog.h \
+	biomemapgeneratorDialog.h \
+	ImageProcessor.h \
     InGameMap/clipper.hpp \
     InGameMap/ingamemapcell.h \
     InGameMap/ingamemapdock.h \
@@ -318,6 +322,7 @@ FORMS    += mainwindow.ui \
     InGameMap/ingamemapimagepyramidwindow.ui \
     InGameMap/ingamemappropertiesform.ui \
     InGameMap/ingamemappropertydialog.ui \
+	biomemapgenerator.ui \
     loadthumbnailsdialog.ui \
     pngzonesdialog.ui \
     propertiesview.ui \
