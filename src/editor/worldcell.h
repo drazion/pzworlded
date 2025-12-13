@@ -18,6 +18,8 @@
 #ifndef WORLDCELL_H
 #define WORLDCELL_H
 
+#include <limits>
+
 #include "worldproperties.h"
 #include "InGameMap/ingamemapcell.h"
 
