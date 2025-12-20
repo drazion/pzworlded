@@ -185,7 +185,7 @@ QString Preferences::appConfigPath() const
 #elif defined(Q_OS_MAC)
     return QCoreApplication::applicationDirPath() + QLatin1String("/../Config");
 #elif defined(Q_OS_UNIX)
-    return QCoreApplication::applicationDirPath() + QLatin1String("/../../TileZed/share/tilezed/config");
+    return QCoreApplication::applicationDirPath() + QLatin1String("/../config");
 #else
 #error "wtf system is this???"
 #endif

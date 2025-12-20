@@ -21,6 +21,8 @@
 #include "worldproperties.h"
 #include "InGameMap/ingamemapcell.h"
 
+#include <limits>
+
 #include <QColor>
 #include <QPoint>
 #include <QList>
