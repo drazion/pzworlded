@@ -12,10 +12,10 @@ ImageProcessor::ImageProcessor() {
         {qRgb(100, 100, 100), qRgb(64, 64, 64)},     // ForagingNav
         {qRgb(120, 120, 120), qRgb(115, 115, 115)},  // TownZone
         {qRgb(165, 160, 140), qRgb(115, 115, 115)},  // TownZone
-        {qRgb(145, 135, 60), qRgb(171, 171, 171)},   // Vegitation
-                {qRgb(145, 135, 61), qRgb(171, 171, 171)},   // Vegitation
-        {qRgb(90, 100, 35), qRgb(171, 171, 171)},    // Vegitation
-        {qRgb(117, 117, 47), qRgb(171, 171, 171)},   // Vegitation
+        {qRgb(145, 135, 60), qRgb(141, 141, 141)},   // Vegitation
+                {qRgb(145, 135, 61), qRgb(141, 141, 141)},   // Vegitation
+        {qRgb(90, 100, 35), qRgb(141, 141, 141)},    // Vegitation
+        {qRgb(117, 117, 47), qRgb(141, 141, 141)},   // Vegitation
         {qRgb(120, 70, 20), qRgb(141, 141, 141)},    // FarmLand
         {qRgb(0, 255, 0), qRgb(204, 204, 204)},      // farm_forest
         {qRgb(64, 0, 0), qRgb(153, 153, 153)},       // ph_forest
